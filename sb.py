@@ -17,7 +17,7 @@ botStart = time.time()
 #line = LINE()
 #line = LINE("AuthToken")
 #line = LINE("Email","Password")
-line = LINE()
+line = LINE("Ev4sTc6LdfHmSC3wTERf.K9hUseF6j4f/WE5DLTHHBW.9x0woCv8AG+Qymlh6ETwnCUzVMw9k0b+V5Fvj/pw+Hc=")
 line.log("Auth Token : " + str(line.authToken))
 channelToken = line.getChannelResult()
 line.log("Channel Token : " + str(channelToken))
@@ -873,7 +873,7 @@ def lineBot(op):
                                 group = line.getGroup(to)
                                 contact = [mem.mid for mem in group.members]
                                 ct1, ct2, ct3, ct4, ct5, jml = [], [], [], [], [], len(contact)
-                                if jml <= 100:
+                                if jml <= 19:
                                     mentionMembers(to, contact)
                                 elif jml > 100 and jml <= 200: 
                                     for a in range(0, 99):
