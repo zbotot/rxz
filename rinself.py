@@ -866,28 +866,22 @@ def lineBot(op):
                            line.sendMessage(msg.to,"Sambutan Di Nonaktifkan(　＾∇＾)")
 
 # Pembatas Script #
-                            elif cmd == "changepictureprofile":
-                                wait["changePictureProfile"] = True
-                                line.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
-                            elif cmd == "changegrouppicture":
-                                if msg.toType == 2:
-                                    if to not in wait["changeGroupPicture"]:
-                                        wait["changeGroupPicture"].append(to)
-                                    line.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
-                            elif cmd == 'mention':
-                                group = line.getGroup(msg.to)
-                                nama = [contact.mid for contact in group.members]
-                                k = len(nama)//20
-                                for a in range(k+1):
-                                    txt = u''
-                                    s=0
-                                    b=[]
-                                    for i in group.members[a*20 : (a+1)*20]:
-                                        b.append({"S":str(s), "E" :str(s+6), "M":i.mid})
-                                        s += 7
-                                        txt += u'@Zero \n'
-                                    line.sendMessage(to, text=txt, contentMetadata={u'MENTION': json.dumps({'MENTIONEES':b})}, contentType=0)
-                                    line.sendMessage(to, "Total {} Mention".format(str(len(nama))))
+
+				elif cmd == 'mention':
+					group = line.getGroup(msg.to)
+					nama = [contact.mid for contact in group.members]
+					k = len(nama)//20
+					for a in range(k+1):
+						txt = u''
+						s=0
+						b=[]
+						for i in group.members[a*20 : (a+1)*20]:
+							b.append({"S":str(s), "E" :str(s+6), "M":i.mid})
+							s += 7
+							txt += u'@Zero \n'
+						line.sendMessage(to, text=txt, contentMetadata={u'MENTION': json.dumps({'MENTIONEES':b})}, contentType=0)
+						line.sendMessage(to, "Total {} Mention".format(str(len(nama))))
+                                    
 #===================================================================#
                 elif text.lower() == 'changepictureprofile':
                             settings["changePicture"] = True
