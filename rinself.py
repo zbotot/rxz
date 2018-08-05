@@ -1,1853 +1,2587 @@
 # -*- coding: utf-8 -*-
-
 from LineAPI.linepy import *
-from LineAPI.akad.ttypes import Message
+from LineAPI.akad.ttypes import Message                                                                                                                                             
 from LineAPI.akad.ttypes import ContentType as Type
+from multiprocessing import Pool, Process
 from gtts import gTTS
 from time import sleep
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from googletrans import Translator
 from humanfriendly import format_timespan, format_size, format_number, format_length
-import time, random, sys, json, codecs, threading, glob, re, string, os, requests, six, ast, pytz, urllib, urllib3, urllib.parse, traceback, atexit, subprocess
+import time, random, sys, json, codecs, threading, glob, re, string, os, requests, subprocess, six, ast, pytz, urllib.request, urllib.parse, urllib.error, urllib.parse
 
-ririn = LINE("EtAMLgb0zoJwV5h2ESr6.7kqscP17dKQEF08Bg5AKnG.LkvtwSoDccEW4SQQb9rQh1/2dUXRv11BQfcebyDgolg='''''")
-#ririn = LINE("TOKENMU")
-
-ririnMid = ririn.profile.mid
-ririnProfile = ririn.getProfile()
-ririnSettings = ririn.getSettings()
-ririnPoll = OEPoll(ririn)
+#==============================================================================#
 botStart = time.time()
 
-print ("╔═════════════════════════\n║╔════════════════════════\n║╠❂➣ DNA BERHASIL LOGIN\n║╚════════════════════════\n╚═════════════════════════")
+#line = LINE()
+#line = LINE("AuthToken")
+#line = LINE("Email","Password")
+line = LINE("Ev4sTc6LdfHmSC3wTERf.K9hUseF6j4f/WE5DLTHHBW.9x0woCv8AG+Qymlh6ETwnCUzVMw9k0b+V5Fvj/pw+Hc=")
+line.log("Auth Token : " + str(line.authToken))
+channelToken = line.getChannelResult()
+line.log("Channel Token : " + str(channelToken))
 
-msg_dict = {}
+readOpen = codecs.open("read.json","r","utf-8")
+settingsOpen = codecs.open("temp.json","r","utf-8")
 
-wait = {
-    "autoAdd": True,
-    "autoJoin": True,
+lineMID = line.profile.mid
+lineProfile = line.getProfile()
+lineSettings = line.getSettings()
+oepoll = OEPoll(line)
+
+read = json.load(readOpen)
+settings = json.load(settingsOpen)
+
+#settings["myProfile"]["displayName"] = lineProfile.displayName 
+#settings["myProfile"]["statusMessage"] = lineProfile.statusMessage
+#settings["myProfile"]["pictureStatus"] = lineProfile.pictureStatus
+
+#==============================================================================#
+settings = {
+    "autoAdd": False,
+    "autoJoin": False,
     "autoLeave": False,
     "autoRead": False,
-    "autoRespon": True,
-    "autoResponPc": False,
-    "autoJoinTicket": True,
-    "checkContact": False,
-    "checkPost": False,
+    "lang":"JP",
+    "detectMention": True,
+    "changeGroupPicture":[],
+    "Sambutan": False,
+    "Sider":{},
     "checkSticker": False,
-    "changePictureProfile": False,
-    "changeGroupPicture": [],
-    "keyCommand": "",
-    "leaveRoom": True,
-    "myProfile": {
-        "displayName": "",
-        "coverId": "",
-        "pictureStatus": "",
-        "statusMessage": ""
-    },
+    "userAgent": [
+        "Mozilla/5.0 (X11; U; Linux i586; de; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (X11; U; Linux amd64; rv:5.0) Gecko/20100101 Firefox/5.0 (Debian)",
+        "Mozilla/5.0 (X11; U; Linux amd64; en-US; rv:5.0) Gecko/20110619 Firefox/5.0",
+        "Mozilla/5.0 (X11; Linux) Gecko Firefox/5.0",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:5.0) Gecko/20100101 Firefox/5.0 FirePHP/0.5",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0",
+        "Mozilla/5.0 (X11; Linux x86_64) Gecko Firefox/5.0",
+        "Mozilla/5.0 (X11; Linux ppc; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (X11; Linux AMD64) Gecko Firefox/5.0",
+        "Mozilla/5.0 (X11; FreeBSD amd64; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:5.0) Gecko/20110619 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 6.1; rv:6.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 6.1.1; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 5.2; WOW64; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 5.1; U; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 5.1; rv:2.0.1) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 5.0; WOW64; rv:5.0) Gecko/20100101 Firefox/5.0",
+        "Mozilla/5.0 (Windows NT 5.0; rv:5.0) Gecko/20100101 Firefox/5.0"
+    ],
     "mimic": {
         "copy": False,
         "status": False,
         "target": {}
-    },
-    "Protectcancel": True,
-    "Protectgr": True,
-    "Protectinvite": True,
-    "Protectjoin": False,
-    "setKey": False,
-    "sider": False,
-    "unsendMessage": True
+    }
+}
+
+read = {
+    "readPoint": {},
+    "readMember": {},
+    "readTime": {},
+    "ROM": {}
+}
+
+myProfile = {
+	"displayName": "",
+	"statusMessage": "",
+	"pictureStatus": ""
 }
 
 cctv = {
     "cyduk":{},
     "point":{},
+    "MENTION":{},
     "sidermem":{}
 }
 
-read = {
-    "ROM": {},
-    "readPoint": {},
-    "readMember": {},
-    "readTime": {}
-}
-
-list_language = {
-    "list_textToSpeech": {
-        "id": "Indonesia",
-        "af" : "Afrikaans",
-        "sq" : "Albanian",
-        "ar" : "Arabic",
-        "hy" : "Armenian",
-        "bn" : "Bengali",
-        "ca" : "Catalan",
-        "zh" : "Chinese",
-        "zh-cn" : "Chinese (Mandarin/China)",
-        "zh-tw" : "Chinese (Mandarin/Taiwan)",
-        "zh-yue" : "Chinese (Cantonese)",
-        "hr" : "Croatian",
-        "cs" : "Czech",
-        "da" : "Danish",
-        "nl" : "Dutch",
-        "en" : "English",
-        "en-au" : "English (Australia)",
-        "en-uk" : "English (United Kingdom)",
-        "en-us" : "English (United States)",
-        "eo" : "Esperanto",
-        "fi" : "Finnish",
-        "fr" : "French",
-        "de" : "German",
-        "el" : "Greek",
-        "hi" : "Hindi",
-        "hu" : "Hungarian",
-        "is" : "Icelandic",
-        "id" : "Indonesian",
-        "it" : "Italian",
-        "ja" : "Japanese",
-        "km" : "Khmer (Cambodian)",
-        "ko" : "Korean",
-        "la" : "Latin",
-        "lv" : "Latvian",
-        "mk" : "Macedonian",
-        "no" : "Norwegian",
-        "pl" : "Polish",
-        "pt" : "Portuguese",
-        "ro" : "Romanian",
-        "ru" : "Russian",
-        "sr" : "Serbian",
-        "si" : "Sinhala",
-        "sk" : "Slovak",
-        "es" : "Spanish",
-        "es-es" : "Spanish (Spain)",
-        "es-us" : "Spanish (United States)",
-        "sw" : "Swahili",
-        "sv" : "Swedish",
-        "ta" : "Tamil",
-        "th" : "Thai",
-        "tr" : "Turkish",
-        "uk" : "Ukrainian",
-        "vi" : "Vietnamese",
-        "cy" : "Welsh"
-    },
-    "list_translate": {    
-        "af": "afrikaans",
-        "sq": "albanian",
-        "am": "amharic",
-        "ar": "arabic",
-        "hy": "armenian",
-        "az": "azerbaijani",
-        "eu": "basque",
-        "be": "belarusian",
-        "bn": "bengali",
-        "bs": "bosnian",
-        "bg": "bulgarian",
-        "ca": "catalan",
-        "ceb": "cebuano",
-        "ny": "chichewa",
-        "zh-cn": "chinese (simplified)",
-        "zh-tw": "chinese (traditional)",
-        "co": "corsican",
-        "hr": "croatian",
-        "cs": "czech",
-        "da": "danish",
-        "nl": "dutch",
-        "en": "english",
-        "eo": "esperanto",
-        "et": "estonian",
-        "tl": "filipino",
-        "fi": "finnish",
-        "fr": "french",
-        "fy": "frisian",
-        "gl": "galician",
-        "ka": "georgian",
-        "de": "german",
-        "el": "greek",
-        "gu": "gujarati",
-        "ht": "haitian creole",
-        "ha": "hausa",
-        "haw": "hawaiian",
-        "iw": "hebrew",
-        "hi": "hindi",
-        "hmn": "hmong",
-        "hu": "hungarian",
-        "is": "icelandic",
-        "ig": "igbo",
-        "id": "indonesian",
-        "ga": "irish",
-        "it": "italian",
-        "ja": "japanese",
-        "jw": "javanese",
-        "kn": "kannada",
-        "kk": "kazakh",
-        "km": "khmer",
-        "ko": "korean",
-        "ku": "kurdish (kurmanji)",
-        "ky": "kyrgyz",
-        "lo": "lao",
-        "la": "latin",
-        "lv": "latvian",
-        "lt": "lithuanian",
-        "lb": "luxembourgish",
-        "mk": "macedonian",
-        "mg": "malagasy",
-        "ms": "malay",
-        "ml": "malayalam",
-        "mt": "maltese",
-        "mi": "maori",
-        "mr": "marathi",
-        "mn": "mongolian",
-        "my": "myanmar (burmese)",
-        "ne": "nepali",
-        "no": "norwegian",
-        "ps": "pashto",
-        "fa": "persian",
-        "pl": "polish",
-        "pt": "portuguese",
-        "pa": "punjabi",
-        "ro": "romanian",
-        "ru": "russian",
-        "sm": "samoan",
-        "gd": "scots gaelic",
-        "sr": "serbian",
-        "st": "sesotho",
-        "sn": "shona",
-        "sd": "sindhi",
-        "si": "sinhala",
-        "sk": "slovak",
-        "sl": "slovenian",
-        "so": "somali",
-        "es": "spanish",
-        "su": "sundanese",
-        "sw": "swahili",
-        "sv": "swedish",
-        "tg": "tajik",
-        "ta": "tamil",
-        "te": "telugu",
-        "th": "thai",
-        "tr": "turkish",
-        "uk": "ukrainian",
-        "ur": "urdu",
-        "uz": "uzbek",
-        "vi": "vietnamese",
-        "cy": "welsh",
-        "xh": "xhosa",
-        "yi": "yiddish",
-        "yo": "yoruba",
-        "zu": "zulu",
-        "fil": "Filipino",
-        "he": "Hebrew"
-    }
-}
-
-try:
-    with open("Log_data.json","r",encoding="utf_8_sig") as f:
-        msg_dict = json.loads(f.read())
-except:
-    print("Couldn't read Log data")
-    
-wait["myProfile"]["displayName"] = ririnProfile.displayName
-wait["myProfile"]["statusMessage"] = ririnProfile.statusMessage
-wait["myProfile"]["pictureStatus"] = ririnProfile.pictureStatus
-coverId = ririn.getProfileDetail()["result"]["objectId"]
-wait["myProfile"]["coverId"] = coverId
-
+myProfile["displayName"] = lineProfile.displayName
+myProfile["statusMessage"] = lineProfile.statusMessage
+myProfile["pictureStatus"] = lineProfile.pictureStatus
+#==============================================================================#
 def restartBot():
-    print ("[ INFO ] BOT RESTART")
+    print ("[ INFO ] BOT RESETTED")
+    time.sleep(3)
     python = sys.executable
     os.execl(python, python, *sys.argv)
     
 def logError(text):
-    ririn.log("[ ERROR ] {}".format(str(text)))
-    tz = pytz.timezone("Asia/Jakarta")
-    timeNow = datetime.now(tz=tz)
-    timeHours = datetime.strftime(timeNow,"(%H:%M)")
-    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
-    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
-    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-    inihari = datetime.now(tz=tz)
-    hr = inihari.strftime('%A')
-    bln = inihari.strftime('%m')
-    for i in range(len(day)):
-        if hr == day[i]: hasil = hari[i]
-    for k in range(0, len(bulan)):
-        if bln == str(k): bln = bulan[k-1]
-    time = "{}, {} - {} - {} | {}".format(str(hasil), str(inihari.strftime('%d')), str(bln), str(inihari.strftime('%Y')), str(inihari.strftime('%H:%M:%S')))
-    with open("logError.txt","a") as error:
-        error.write("\n[ {} ] {}".format(str(time), text))
+    line.log("[ ERROR ] " + str(text))
+    time_ = datetime.now()
+    with open("errorLog.txt","a") as error:
+        error.write("\n[%s] %s" % (str(time), text))
+        
+def sendMention(to, mid, firstmessage, lastmessage):
+    try:
+        arrData = ""
+        text = "%s " %(str(firstmessage))
+        arr = []
+        mention = "@x "
+        slen = str(len(text))
+        elen = str(len(text) + len(mention) - 1)
+        arrData = {'S':slen, 'E':elen, 'M':mid}
+        arr.append(arrData)
+        text += mention + str(lastmessage)
+        line.sendMessage(to, text, {'MENTION': str('{"MENTIONEES":' + json.dumps(arr) + '}')}, 0)
+    except Exception as error:
+        logError(error)
+        line.sendMessage(to, "[ INFO ] Error :\n" + str(error))
 
-def cTime_to_datetime(unixtime):
-    return datetime.fromtimestamp(int(str(unixtime)[:len(str(unixtime))-3]))
-def dt_to_str(dt):
-    return dt.strftime('%H:%M:%S')
+def sendMessage(to, Message, contentMetadata={}, contentType=0):
+    mes = Message()
+    mes.to, mes._from = to, profile.mid
+    mes.text = text
+    mes.contentType, mes.contentMetadata = contentType, contentMetadata
+    if to not in messageReq:
+        messageReq[to] = -1
+    messageReq[to] += 1
 
-def delete_log():
-    ndt = datetime.now()
-    for data in msg_dict:
-        if (datetime.utcnow() - cTime_to_datetime(msg_dict[data]["createdTime"])) > timedelta(1):
-            if "path" in msg_dict[data]:
-                ririn.deleteFile(msg_dict[data]["path"])
-            del msg_dict[data]
-            
-def sendMention(to, text="", mids=[]):
-    arrData = ""
-    arr = []
-    mention = "@dee "
-    if mids == []:
-        raise Exception("Invalid mids")
-    if "@!" in text:
-        if text.count("@!") != len(mids):
-            raise Exception("Invalid mids")
-        texts = text.split("@!")
-        textx = ""
-        for mid in mids:
-            textx += str(texts[mids.index(mid)])
-            slen = len(textx)
-            elen = len(textx) + 15
-            arrData = {'S':str(slen), 'E':str(elen - 4), 'M':mid}
+def sendMessageWithMention(to, mid):
+    try:
+        aa = '{"S":"0","E":"3","M":'+json.dumps(mid)+'}'
+        text_ = '@x '
+        line.sendMessage(to, text_, contentMetadata={'MENTION':'{"MENTIONEES":['+aa+']}'}, contentType=0)
+    except Exception as error:
+        logError(error)
+
+        
+def mentionMembers(to, mid):
+    try:
+        arrData = ""
+        textx = "╔══[Mention {} User]\n╠ ".format(str(len(mid)))
+        arr = []
+        no = 1
+        for i in mid:
+            mention = "@x\n"
+            slen = str(len(textx))
+            elen = str(len(textx) + len(mention) - 1)
+            arrData = {'S':slen, 'E':elen, 'M':i}
             arr.append(arrData)
             textx += mention
-        textx += str(texts[len(mids)])
-    else:
-        textx = ""
-        slen = len(textx)
-        elen = len(textx) + 15
-        arrData = {'S':str(slen), 'E':str(elen - 4), 'M':mids[0]}
-        arr.append(arrData)
-        textx += mention + str(text)
-    ririn.sendMessage(to, textx, {'MENTION': str('{"MENTIONEES":' + json.dumps(arr) + '}')}, 0)
+            if no < len(mid):
+                no += 1
+                textx += "╠ "
+            else:
+                try:
+                    textx += "╚══[ {} ]".format(str(line.getGroup(to).name))
+                except:
+                    pass
+        line.sendMessage(to, textx, {'MENTION': str('{"MENTIONEES":' + json.dumps(arr) + '}')}, 0)
+    except Exception as error:
+        logError(error)
+        line.sendMessage(to, "[ INFO ] Error :\n" + str(error))
 
-def command(text):
-    pesan = text.lower()
-    if wait["setKey"] == True:
-        if pesan.startswith(wait["keyCommand"]):
-            cmd = pesan.replace(wait["keyCommand"],"")
-        else:
-            cmd = "Undefined command"
-    else:
-        cmd = text.lower()
-    return cmd
-    
+def backupData():
+    try:
+        backup = settings
+        f = codecs.open('temp.json','w','utf-8')
+        json.dump(backup, f, sort_keys=True, indent=4, ensure_ascii=False)
+        backup = read
+        f = codecs.open('read.json','w','utf-8')
+        json.dump(backup, f, sort_keys=True, indent=4, ensure_ascii=False)
+        return True
+    except Exception as error:
+        logError(error)
+        return False
+
 def helpmessage():
-    if wait['setKey'] == True:
-        key = wait['keyCommand']
-    else:
-        key = ''
-    helpMessage =   "╔════════════════════╗" + "\n" + \
-                    "                    ✰ ᴅɴᴀ ʙᴏᴛ ✰" + "\n" + \
-                    "╚════════════════════╝" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "    ✪ 🅷🅴🅻🅿 🅼🅴🆂🆂🅰🅶🅴 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ʜᴇʟᴘ " + "\n" + \
-                    "╠❂➣ " + key + "ᴛᴛs " + "\n" + \
-                    "╠❂➣ " + key + "ᴛʀᴀɴsʟᴀᴛᴇ " + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "               ✪ 🆂🆃🅰🆃🆄🆂 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ʀᴇsᴛᴀʀᴛ" + "\n" + \
-                    "╠❂➣ " + key + "ʀᴜɴᴛɪᴍᴇ" + "\n" + \
-                    "╠❂➣ " + key + "sᴘ" + "\n" + \
-                    "╠❂➣ " + key + "sᴘᴇᴇᴅ" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴀᴛᴜs" + "\n" + \
-                    "╠❂➣ ᴍʏᴋᴇʏ" + "\n" + \
-                    "╠❂➣ sᴇᴛᴋᴇʏ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "           ✪ 🆂🅴🆃🆃🅸🅽🅶🆂 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏᴀᴅᴅ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏᴊᴏɪɴ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏᴊᴏɪɴᴛɪᴄᴋᴇᴛ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏʟᴇᴀᴠᴇ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏʀᴇᴀᴅ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏʀᴇsᴘᴏɴ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴀᴜᴛᴏʀᴇsᴘᴏɴᴘᴄ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴄᴏɴᴛᴀᴄᴛ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴘᴏsᴛ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋsᴛɪᴄᴋᴇʀ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴜɴsᴇɴᴅᴄʜᴀᴛ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "                    ✪ 🆂🅴🅻🅵 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ʙᴀᴄᴋᴜᴘᴘʀᴏғɪʟᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴀɴɢᴇʙɪᴏ:「ǫᴜᴇʀʏ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴀɴɢᴇɴᴀᴍᴇ:「ǫᴜᴇʀʏ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʟᴏɴᴇᴘʀᴏғɪʟᴇ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴀɴɢᴇᴘɪᴄᴛᴜʀᴇᴘʀᴏғɪʟᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏᴍɪᴅ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏɴᴀᴍᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏʙɪᴏ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏᴘɪᴄᴛᴜʀᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏᴠɪᴅᴇᴏᴘʀᴏғɪʟᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍʏᴄᴏᴠᴇʀ" + "\n" + \
-                    "╠❂➣ " + key + "ʀᴇsᴛᴏʀᴇᴘʀᴏғɪʟᴇ" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟᴄᴏɴᴛᴀᴄᴛ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟᴍɪᴅ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟɴᴀᴍᴇ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟʙɪᴏ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟᴘɪᴄᴛᴜʀᴇ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟᴠɪᴅᴇᴏᴘʀᴏғɪʟᴇ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴛᴇᴀʟᴄᴏᴠᴇʀ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "             ✪ 🆂🅿🅴🅲🅸🅰🅻 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ʟᴜʀᴋɪɴɢ" + "\n" + \
-                    "╠❂➣ " + key + "ʟᴜʀᴋɪɴɢ「ᴏɴ/ᴏғғ/ʀᴇsᴇᴛ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴍᴇɴᴛɪᴏɴ" + "\n" + \
-                    "╠❂➣ " + key + "ᴍɪᴍɪᴄ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴍɪᴍɪᴄᴀᴅᴅ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴍɪᴍɪᴄᴅᴇʟ「ᴍᴇɴᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴍɪᴍɪᴄʟɪsᴛ" + "\n" + \
-                    "╠❂➣ " + key + "sɪᴅᴇʀ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "                 ✪ 🅶🆁🅾🆄🅿 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴀɴɢᴇɢʀᴏᴜᴘᴘɪᴄᴛᴜʀᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘᴄʀᴇᴀᴛᴏʀ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘɪᴅ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘɴᴀᴍᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘᴘɪᴄᴛᴜʀᴇ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘᴛɪᴄᴋᴇᴛ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘᴛɪᴄᴋᴇᴛ「ᴏɴ/ᴏғғ」" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘᴍᴇᴍʙᴇʀʟɪsᴛ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘɪɴғᴏ" + "\n" + \
-                    "╠❂➣ " + key + "ɢʀᴏᴜᴘʟɪsᴛ" + "\n" + \
-                    "╠❂➣ " + key + "ɪɴᴠɪᴛᴇɢᴄ「ᴀᴍᴏᴜɴᴛ」" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "                  ✪ 🅼🅴🅳🅸🅰 ✪" + "\n" + \
-                    "╠════════════════════╝" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴅᴀᴛᴇ「ᴅᴀᴛᴇ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋʟᴏᴄᴀᴛɪᴏɴ「ʟᴏᴄᴀᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴘʀᴀʏᴛɪᴍᴇ「ʟᴏᴄᴀᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴡᴇᴀᴛʜᴇʀ「ʟᴏᴄᴀᴛɪᴏɴ」" + "\n" + \
-                    "╠❂➣ " + key + "ᴄʜᴇᴄᴋᴡᴇʙsɪᴛᴇ「ᴜʀʟ」" + "\n" + \
-                    "╠❂➣ " + key + "ɪɴsᴛᴀɪɴғᴏ 「ᴜsᴇʀɴᴀᴍᴇ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴇᴀʀᴄʜɪᴍᴀɢᴇ 「sᴇᴀʀᴄʜ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴇᴀʀᴄʜʟʏʀɪᴄ 「sᴇᴀʀᴄʜ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴇᴀʀᴄʜᴍᴜsɪᴄ 「sᴇᴀʀᴄʜ」" + "\n" + \
-                    "╠❂➣ " + key + "sᴇᴀʀᴄʜʏᴏᴜᴛᴜʙᴇ「sᴇᴀʀᴄʜ」" + "\n" + \
-                    "╠════════════════════╗" + "\n" + \
-                    "                ᴄʀᴇᴅɪᴛs ʙʏ : ᴅ̶ᴇ̶ᴇ̶ ✯" + "\n" + \
-                    "╚════════════════════╝" + "\n" + \
-                    "╔════════════════════╗" + "\n" + \
-                    "                   ✰ ᴅɴᴀ ʙᴏᴛ  ✰" + "\n" + \
-                    "╚════════════════════╝"
+    helpMessage = "╔══[нєℓρ мєѕѕαgє]" + "\n" + \
+                  "╠ Help" + "\n" + \
+                  "╠ Translate" + "\n" + \
+                  "╠ TextToSpeech" + "\n" + \
+                  "╠══[ Status Command ]" + "\n" + \
+                  "╠ Restart" + "\n" + \
+                  "╠ Runtime" + "\n" + \
+                  "╠ Speed" + "\n" + \
+                  "╠ Status" + "\n" + \
+                  "╠ About" + "\n" + \
+                  "╠══[ Settings Command ]" + "\n" + \
+                  "╠ AutoAdd「On/Off」" + "\n" + \
+                  "╠ AutoJoin「On/Off」" + "\n" + \
+                  "╠ AutoLeave「On/Off」" + "\n" + \
+                  "╠ AutoRead「On/Off」" + "\n" + \
+                  "╠ CheckSticker「On/Off」" + "\n" + \
+                  "╠ DetectMention「On/Off」" + "\n" + \
+                  "╠══[ Self Command ]" + "\n" + \
+                  "╠ Me" + "\n" + \
+                  "╠ MyMid" + "\n" + \
+                  "╠ MyName" + "\n" + \
+                  "╠ MyBio" + "\n" + \
+                  "╠ MyPicture" + "\n" + \
+                  "╠ MyVideoProfile" + "\n" + \
+                  "╠ MyCover" + "\n" + \
+                  "╠ StealContact「Mention」" + "\n" + \
+                  "╠ StealMid「Mention」" + "\n" + \
+                  "╠ StealName「Mention」" + "\n" + \
+                  "╠ StealBio「Mention」" + "\n" + \
+                  "╠ StealPicture「Mention」" + "\n" + \
+                  "╠ StealVideoProfile「Mention」" + "\n" + \
+                  "╠ StealCover「Mention」" + "\n" + \
+                  "╠ CloneProfile「Mention」" + "\n" + \
+                  "╠ RestoreProfile" + "\n" + \
+                  "╠══[ Group Command ]" + "\n" + \
+                  "╠ GroupCreator" + "\n" + \
+                  "╠ GroupId" + "\n" + \
+                  "╠ GroupName" + "\n" + \
+                  "╠ GroupPicture" + "\n" + \
+                  "╠ GroupTicket" + "\n" + \
+                  "╠ GroupTicket「On/Off」" + "\n" + \
+                  "╠ GroupList" + "\n" + \
+                  "╠ GroupMemberList" + "\n" + \
+                  "╠ GroupInfo" + "\n" + \
+                  "╠══[ Special Command ]" + "\n" + \
+                  "╠ Mimic「On/Off」" + "\n" + \
+                  "╠ MimicList" + "\n" + \
+                  "╠ MimicAdd「Mention」" + "\n" + \
+                  "╠ MimicDel「Mention」" + "\n" + \
+                  "╠ Mention" + "\n" + \
+                  "╠ Lurking「On/Off/Reset」" + "\n" + \
+                  "╠ Lurking" + "\n" + \
+                  "╠══[ Media Command ]" + "\n" + \
+                  "╠ Kalender" + "\n" + \
+                  "╠ CheckDate「Date」" + "\n" + \
+                  "╠ InstagramInfo「UserName」" + "\n" + \
+                  "╠ InstagramPost「UserName」" + "\n" + \
+                  "╠ SearchYoutube「Search」" + "\n" + \
+                  "╠ SearchMusic「Search」" + "\n" + \
+                  "╠ SearchLyric「Search」" + "\n" + \
+                  "╠ SearchImage「Search」" + "\n" + \
+                  "╠ ScreenshootWebsite「LinkURL」" + "\n" + \
+                  "╚══[     Ｈｅｌｌｏ Ｗｏｒｌｄ      ]"
     return helpMessage
-
-def helptexttospeech():
-    if wait['setKey'] == True:
-        key = wait['keyCommand']
-    else:
-        key = ''
-    helpTextToSpeech =  "╔════════════════════╗" + "\n" + \
-                        "                    ✰ ᴅɴᴀ ʙᴏᴛ ✰" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "╔════════════════════╗" + "\n" + \
-                        "          ◄]·✪·ᴛᴇxᴛᴛᴏsᴘᴇᴇᴄʜ·✪·[►" + "\n" + \
-                        "╠════════════════════╝ " + "\n" + \
-                        "╠❂➣ " + key + "ᴀғ : ᴀғʀɪᴋᴀᴀɴs" + "\n" + \
-                        "╠❂➣ " + key + "sǫ : ᴀʟʙᴀɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴀʀ : ᴀʀᴀʙɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "ʜʏ : ᴀʀᴍᴇɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʙɴ : ʙᴇɴɢᴀʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄᴀ : ᴄᴀᴛᴀʟᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴢʜ : ᴄʜɪɴᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴢʜʏᴜᴇ : ᴄʜɪɴᴇsᴇ (ᴄᴀɴᴛᴏɴᴇsᴇ)" + "\n" + \
-                        "╠❂➣ " + key + "ʜʀ : ᴄʀᴏᴀᴛɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄs : ᴄᴢᴇᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴅᴀ : ᴅᴀɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ɴʟ : ᴅᴜᴛᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇɴ : ᴇɴɢʟɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇɴᴀᴜ : ᴇɴɢʟɪsʜ (ᴀᴜsᴛʀᴀʟɪᴀ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴇɴᴜᴋ : ᴇɴɢʟɪsʜ (ᴜᴋ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴇɴᴜs : ᴇɴɢʟɪsʜ (ᴜs)" + "\n" + \
-                        "╠❂➣ " + key + "ᴇᴏ : ᴇsᴘᴇʀᴀɴᴛᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ғɪ : ғɪɴɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ғʀ : ғʀᴇɴᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴅᴇ : ɢᴇʀᴍᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇʟ : ɢʀᴇᴇᴋ" + "\n" + \
-                        "╠❂➣ " + key + "ʜɪ : ʜɪɴᴅɪ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴜ : ʜᴜɴɢᴀʀɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɪs : ɪᴄᴇʟᴀɴᴅɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "ɪᴅ : ɪɴᴅᴏɴᴇsɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɪᴛ : ɪᴛᴀʟɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴊᴀ : ᴊᴀᴘᴀɴᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴍ : ᴋʜᴍᴇʀ (ᴄᴀᴍʙᴏᴅɪᴀɴ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴏ : ᴋᴏʀᴇᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴀ : ʟᴀᴛɪɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴠ : ʟᴀᴛᴠɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍᴋ : ᴍᴀᴄᴇᴅᴏɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɴᴏ : ɴᴏʀᴡᴇɢɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘʟ : ᴘᴏʟɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘᴛ : ᴘᴏʀᴛᴜɢᴜᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ʀᴏ : ʀᴏᴍᴀɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʀᴜ : ʀᴜssɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "sʀ : sᴇʀʙɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "sɪ : sɪɴʜᴀʟᴀ" + "\n" + \
-                        "╠❂➣ " + key + "sᴋ : sʟᴏᴠᴀᴋ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇs : sᴘᴀɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇsᴇs : sᴘᴀɴɪsʜ (sᴘᴀɪɴ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴇsᴜs : sᴘᴀɴɪsʜ (ᴜs)" + "\n" + \
-                        "╠❂➣ " + key + "sᴡ : sᴡᴀʜɪʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "sᴠ : sᴡᴇᴅɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛᴀ : ᴛᴀᴍɪʟ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛʜ : ᴛʜᴀɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛʀ : ᴛᴜʀᴋɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴜᴋ : ᴜᴋʀᴀɪɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴠɪ : ᴠɪᴇᴛɴᴀᴍᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄʏ : ᴡᴇʟsʜ" + "\n" + \
-                        "╠════════════════════╗" + "\n" + \
-                        "               ᴄʀᴇᴅɪᴛs ʙʏ : ©ᴅ̶ᴇ̶ᴇ̶ ✯" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "╔════════════════════╗" + "\n" + \
-                        "                    ✰ ᴅɴᴀ ʙᴏᴛ ✰" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "ᴄᴏɴᴛᴏʜ : " + key + "sᴀʏ-ɪᴅ ʀɪʀɪɴ"
-    return helpTextToSpeech
-
-def helptranslate():
-    if wait['setKey'] == True:
-        key = wait['keyCommand']
-    else:
-        key = ''
-    helpTranslate = "╔════════════════════╗" + "\n" + \
-                        "                     ✰ ᴅɴᴀ ʙᴏᴛ ✰" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "╔════════════════════╗" + "\n" + \
-                        "             ◄]·✪·ᴛʀᴀɴsʟᴀᴛᴇ·✪·[►" + "\n" + \
-                        "╠════════════════════╝" + "\n" + \
-                        "╠❂➣ " + key + "ᴀғ : ᴀғʀɪᴋᴀᴀɴs" + "\n" + \
-                        "╠❂➣ " + key + "sǫ : ᴀʟʙᴀɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴀᴍ : ᴀᴍʜᴀʀɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "ᴀʀ : ᴀʀᴀʙɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "ʜʏ : ᴀʀᴍᴇɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴀᴢ : ᴀᴢᴇʀʙᴀɪᴊᴀɴɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇᴜ : ʙᴀsǫᴜᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ʙᴇ : ʙᴇʟᴀʀᴜsɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʙɴ : ʙᴇɴɢᴀʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "ʙs : ʙᴏsɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʙɢ : ʙᴜʟɢᴀʀɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄᴀ : ᴄᴀᴛᴀʟᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄᴇʙ : ᴄᴇʙᴜᴀɴᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ɴʏ : ᴄʜɪᴄʜᴇᴡᴀ" + "\n" + \
-                        "╠❂➣ " + key + "ᴢʜᴄɴ : ᴄʜɪɴᴇsᴇ (sɪᴍᴘʟɪғɪᴇᴅ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴢʜᴛᴡ : ᴄʜɪɴᴇsᴇ (ᴛʀᴀᴅɪᴛɪᴏɴᴀʟ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴄᴏ : ᴄᴏʀsɪᴄᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʜʀ : ᴄʀᴏᴀᴛɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄs : ᴄᴢᴇᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴅᴀ : ᴅᴀɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ɴʟ : ᴅᴜᴛᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇɴ : ᴇɴɢʟɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇᴏ : ᴇsᴘᴇʀᴀɴᴛᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇᴛ : ᴇsᴛᴏɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛʟ : ғɪʟɪᴘɪɴᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ғɪ : ғɪɴɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ғʀ : ғʀᴇɴᴄʜ" + "\n" + \
-                        "╠❂➣ " + key + "ғʏ : ғʀɪsɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɢʟ : ɢᴀʟɪᴄɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴀ : ɢᴇᴏʀɢɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴅᴇ : ɢᴇʀᴍᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇʟ : ɢʀᴇᴇᴋ" + "\n" + \
-                        "╠❂➣ " + key + "ɢᴜ : ɢᴜᴊᴀʀᴀᴛɪ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴛ : ʜᴀɪᴛɪᴀɴ ᴄʀᴇᴏʟᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴀ : ʜᴀᴜsᴀ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴀᴡ : ʜᴀᴡᴀɪɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɪᴡ : ʜᴇʙʀᴇᴡ" + "\n" + \
-                        "╠❂➣ " + key + "ʜɪ : ʜɪɴᴅɪ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴍɴ : ʜᴍᴏɴɢ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴜ : ʜᴜɴɢᴀʀɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɪs : ɪᴄᴇʟᴀɴᴅɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "ɪɢ : ɪɢʙᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ɪᴅ : ɪɴᴅᴏɴᴇsɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɢᴀ : ɪʀɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ɪᴛ : ɪᴛᴀʟɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴊᴀ : ᴊᴀᴘᴀɴᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴊᴡ : ᴊᴀᴠᴀɴᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋɴ : ᴋᴀɴɴᴀᴅᴀ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴋ : ᴋᴀᴢᴀᴋʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴍ : ᴋʜᴍᴇʀ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴏ : ᴋᴏʀᴇᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴋᴜ : ᴋᴜʀᴅɪsʜ (ᴋᴜʀᴍᴀɴᴊɪ)" + "\n" + \
-                        "╠❂➣ " + key + "ᴋʏ : ᴋʏʀɢʏᴢ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴏ : ʟᴀᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴀ : ʟᴀᴛɪɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴠ : ʟᴀᴛᴠɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʟᴛ : ʟɪᴛʜᴜᴀɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʟʙ : ʟᴜxᴇᴍʙᴏᴜʀɢɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍᴋ : ᴍᴀᴄᴇᴅᴏɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍɢ : ᴍᴀʟᴀɢᴀsʏ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍs : ᴍᴀʟᴀʏ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍʟ : ᴍᴀʟᴀʏᴀʟᴀᴍ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍᴛ : ᴍᴀʟᴛᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍɪ : ᴍᴀᴏʀɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍʀ : ᴍᴀʀᴀᴛʜɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍɴ : ᴍᴏɴɢᴏʟɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴍʏ : ᴍʏᴀɴᴍᴀʀ (ʙᴜʀᴍᴇsᴇ)" + "\n" + \
-                        "╠❂➣ " + key + "ɴᴇ : ɴᴇᴘᴀʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "ɴᴏ : ɴᴏʀᴡᴇɢɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘs : ᴘᴀsʜᴛᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ғᴀ : ᴘᴇʀsɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘʟ : ᴘᴏʟɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘᴛ : ᴘᴏʀᴛᴜɢᴜᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴘᴀ : ᴘᴜɴᴊᴀʙɪ" + "\n" + \
-                        "╠❂➣ " + key + "ʀᴏ : ʀᴏᴍᴀɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ʀᴜ : ʀᴜssɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "sᴍ : sᴀᴍᴏᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ɢᴅ : sᴄᴏᴛs ɢᴀᴇʟɪᴄ" + "\n" + \
-                        "╠❂➣ " + key + "sʀ : sᴇʀʙɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "sᴛ : sᴇsᴏᴛʜᴏ" + "\n" + \
-                        "╠❂➣ " + key + "sɴ : sʜᴏɴᴀ" + "\n" + \
-                        "╠❂➣ " + key + "sᴅ : sɪɴᴅʜɪ" + "\n" + \
-                        "╠❂➣ " + key + "sɪ : sɪɴʜᴀʟᴀ" + "\n" + \
-                        "╠❂➣ " + key + "sᴋ : sʟᴏᴠᴀᴋ" + "\n" + \
-                        "╠❂➣ " + key + "sʟ : sʟᴏᴠᴇɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "sᴏ : sᴏᴍᴀʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴇs : sᴘᴀɴɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "sᴜ : sᴜɴᴅᴀɴᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "sᴡ : sᴡᴀʜɪʟɪ" + "\n" + \
-                        "╠❂➣ " + key + "sᴠ : sᴡᴇᴅɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛɢ : ᴛᴀᴊɪᴋ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛᴀ : ᴛᴀᴍɪʟ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛᴇ : ᴛᴇʟᴜɢᴜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛʜ : ᴛʜᴀɪ" + "\n" + \
-                        "╠❂➣ " + key + "ᴛʀ : ᴛᴜʀᴋɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴜᴋ : ᴜᴋʀᴀɪɴɪᴀɴ" + "\n" + \
-                        "╠❂➣ " + key + "ᴜʀ : ᴜʀᴅᴜ" + "\n" + \
-                        "╠❂➣ " + key + "ᴜᴢ : ᴜᴢʙᴇᴋ" + "\n" + \
-                        "╠❂➣ " + key + "ᴠɪ : ᴠɪᴇᴛɴᴀᴍᴇsᴇ" + "\n" + \
-                        "╠❂➣ " + key + "ᴄʏ : ᴡᴇʟsʜ" + "\n" + \
-                        "╠❂➣ " + key + "xʜ : xʜᴏsᴀ" + "\n" + \
-                        "╠❂➣ " + key + "ʏɪ : ʏɪᴅᴅɪsʜ" + "\n" + \
-                        "╠❂➣ " + key + "ʏᴏ : ʏᴏʀᴜʙᴀ" + "\n" + \
-                        "╠❂➣ " + key + "ᴢᴜ : ᴢᴜʟᴜ" + "\n" + \
-                        "╠❂➣ " + key + "ғɪʟ : ғɪʟɪᴘɪɴᴏ" + "\n" + \
-                        "╠❂➣ " + key + "ʜᴇ : ʜᴇʙʀᴇᴡ" + "\n" + \
-                        "╠════════════════════╗" + "\n" + \
-                        "              ᴄʀᴇᴅɪᴛs ʙʏ : ©ᴅ̶ᴇ̶ᴇ̶ ✯" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "╔════════════════════╗" + "\n" + \
-                        "                    ✰ ᴅɴᴀ ʙᴏᴛ ✰" + "\n" + \
-                        "╚════════════════════╝" + "\n" + \
-                        "ᴄᴏɴᴛᴏʜ : " + key + "ᴛʀ-ɪᴅ ʀɪʀɪɴ"
-    return helpTranslate
     
-def ririnBot(op):
+def helptexttospeech():
+    helpTextToSpeech =   "╔══[ T E X T   T O   S P E E C H ]" + "\n" + \
+                         "╠ af : Afrikaans" + "\n" + \
+                         "╠ sq : Albanian" + "\n" + \
+                         "╠ ar : Arabic" + "\n" + \
+                         "╠ hy : Armenian" + "\n" + \
+                         "╠ bn : Bengali" + "\n" + \
+                         "╠ ca : Catalan" + "\n" + \
+                         "╠ zh : Chinese" + "\n" + \
+                         "╠ zh-cn : Chinese (Mandarin/China)" + "\n" + \
+                         "╠ zh-tw : Chinese (Mandarin/Taiwan)" + "\n" + \
+                         "╠ zh-yue : Chinese (Cantonese)" + "\n" + \
+                         "╠ hr : Croatian" + "\n" + \
+                         "╠ cs : Czech" + "\n" + \
+                         "╠ da : Danish" + "\n" + \
+                         "╠ nl : Dutch" + "\n" + \
+                         "╠ en : English" + "\n" + \
+                         "╠ en-au : English (Australia)" + "\n" + \
+                         "╠ en-uk : English (United Kingdom)" + "\n" + \
+                         "╠ en-us : English (United States)" + "\n" + \
+                         "╠ eo : Esperanto" + "\n" + \
+                         "╠ fi : Finnish" + "\n" + \
+                         "╠ fr : French" + "\n" + \
+                         "╠ de : German" + "\n" + \
+                         "╠ el : Greek" + "\n" + \
+                         "╠ hi : Hindi" + "\n" + \
+                         "╠ hu : Hungarian" + "\n" + \
+                         "╠ is : Icelandic" + "\n" + \
+                         "╠ id : Indonesian" + "\n" + \
+                         "╠ it : Italian" + "\n" + \
+                         "╠ ja : Japanese" + "\n" + \
+                         "╠ km : Khmer (Cambodian)" + "\n" + \
+                         "╠ ko : Korean" + "\n" + \
+                         "╠ la : Latin" + "\n" + \
+                         "╠ lv : Latvian" + "\n" + \
+                         "╠ mk : Macedonian" + "\n" + \
+                         "╠ no : Norwegian" + "\n" + \
+                         "╠ pl : Polish" + "\n" + \
+                         "╠ pt : Portuguese" + "\n" + \
+                         "╠ ro : Romanian" + "\n" + \
+                         "╠ ru : Russian" + "\n" + \
+                         "╠ sr : Serbian" + "\n" + \
+                         "╠ si : Sinhala" + "\n" + \
+                         "╠ sk : Slovak" + "\n" + \
+                         "╠ es : Spanish" + "\n" + \
+                         "╠ es-es : Spanish (Spain)" + "\n" + \
+                         "╠ es-us : Spanish (United States)" + "\n" + \
+                         "╠ sw : Swahili" + "\n" + \
+                         "╠ sv : Swedish" + "\n" + \
+                         "╠ ta : Tamil" + "\n" + \
+                         "╠ th : Thai" + "\n" + \
+                         "╠ tr : Turkish" + "\n" + \
+                         "╠ uk : Ukrainian" + "\n" + \
+                         "╠ vi : Vietnamese" + "\n" + \
+                         "╠ cy : Welsh" + "\n" + \
+                         "╚══[ Jangan Typo ]" + "\n" + "\n\n" + \
+                          "Contoh : ˢᴬᵞ-ᴵᴰ ᶠᴱᴺᴰᵞ ᴶᴱᴸᴱˣ"
+    return helpTextToSpeech
+    
+def helptranslate():
+    helpTranslate =    "╔══[ T R A N S L A T E ]" + "\n" + \
+                       "╠ af : afrikaans" + "\n" + \
+                       "╠ sq : albanian" + "\n" + \
+                       "╠ am : amharic" + "\n" + \
+                       "╠ ar : arabic" + "\n" + \
+                       "╠ hy : armenian" + "\n" + \
+                       "╠ az : azerbaijani" + "\n" + \
+                       "╠ eu : basque" + "\n" + \
+                       "╠ be : belarusian" + "\n" + \
+                       "╠ bn : bengali" + "\n" + \
+                       "╠ bs : bosnian" + "\n" + \
+                       "╠ bg : bulgarian" + "\n" + \
+                       "╠ ca : catalan" + "\n" + \
+                       "╠ ceb : cebuano" + "\n" + \
+                       "╠ ny : chichewa" + "\n" + \
+                       "╠ zh-cn : chinese (simplified)" + "\n" + \
+                       "╠ zh-tw : chinese (traditional)" + "\n" + \
+                       "╠ co : corsican" + "\n" + \
+                       "╠ hr : croatian" + "\n" + \
+                       "╠ cs : czech" + "\n" + \
+                       "╠ da : danish" + "\n" + \
+                       "╠ nl : dutch" + "\n" + \
+                       "╠ en : english" + "\n" + \
+                       "╠ eo : esperanto" + "\n" + \
+                       "╠ et : estonian" + "\n" + \
+                       "╠ tl : filipino" + "\n" + \
+                       "╠ fi : finnish" + "\n" + \
+                       "╠ fr : french" + "\n" + \
+                       "╠ fy : frisian" + "\n" + \
+                       "╠ gl : galician" + "\n" + \
+                       "╠ ka : georgian" + "\n" + \
+                       "╠ de : german" + "\n" + \
+                       "╠ el : greek" + "\n" + \
+                       "╠ gu : gujarati" + "\n" + \
+                       "╠ ht : haitian creole" + "\n" + \
+                       "╠ ha : hausa" + "\n" + \
+                       "╠ haw : hawaiian" + "\n" + \
+                       "╠ iw : hebrew" + "\n" + \
+                       "╠ hi : hindi" + "\n" + \
+                       "╠ hmn : hmong" + "\n" + \
+                       "╠ hu : hungarian" + "\n" + \
+                       "╠ is : icelandic" + "\n" + \
+                       "╠ ig : igbo" + "\n" + \
+                       "╠ id : indonesian" + "\n" + \
+                       "╠ ga : irish" + "\n" + \
+                       "╠ it : italian" + "\n" + \
+                       "╠ ja : japanese" + "\n" + \
+                       "╠ jw : javanese" + "\n" + \
+                       "╠ kn : kannada" + "\n" + \
+                       "╠ kk : kazakh" + "\n" + \
+                       "╠ km : khmer" + "\n" + \
+                       "╠ ko : korean" + "\n" + \
+                       "╠ ku : kurdish (kurmanji)" + "\n" + \
+                       "╠ ky : kyrgyz" + "\n" + \
+                       "╠ lo : lao" + "\n" + \
+                       "╠ la : latin" + "\n" + \
+                       "╠ lv : latvian" + "\n" + \
+                       "╠ lt : lithuanian" + "\n" + \
+                       "╠ lb : luxembourgish" + "\n" + \
+                       "╠ mk : macedonian" + "\n" + \
+                       "╠ mg : malagasy" + "\n" + \
+                       "╠ ms : malay" + "\n" + \
+                       "╠ ml : malayalam" + "\n" + \
+                       "╠ mt : maltese" + "\n" + \
+                       "╠ mi : maori" + "\n" + \
+                       "╠ mr : marathi" + "\n" + \
+                       "╠ mn : mongolian" + "\n" + \
+                       "╠ my : myanmar (burmese)" + "\n" + \
+                       "╠ ne : nepali" + "\n" + \
+                       "╠ no : norwegian" + "\n" + \
+                       "╠ ps : pashto" + "\n" + \
+                       "╠ fa : persian" + "\n" + \
+                       "╠ pl : polish" + "\n" + \
+                       "╠ pt : portuguese" + "\n" + \
+                       "╠ pa : punjabi" + "\n" + \
+                       "╠ ro : romanian" + "\n" + \
+                       "╠ ru : russian" + "\n" + \
+                       "╠ sm : samoan" + "\n" + \
+                       "╠ gd : scots gaelic" + "\n" + \
+                       "╠ sr : serbian" + "\n" + \
+                       "╠ st : sesotho" + "\n" + \
+                       "╠ sn : shona" + "\n" + \
+                       "╠ sd : sindhi" + "\n" + \
+                       "╠ si : sinhala" + "\n" + \
+                       "╠ sk : slovak" + "\n" + \
+                       "╠ sl : slovenian" + "\n" + \
+                       "╠ so : somali" + "\n" + \
+                       "╠ es : spanish" + "\n" + \
+                       "╠ su : sundanese" + "\n" + \
+                       "╠ sw : swahili" + "\n" + \
+                       "╠ sv : swedish" + "\n" + \
+                       "╠ tg : tajik" + "\n" + \
+                       "╠ ta : tamil" + "\n" + \
+                       "╠ te : telugu" + "\n" + \
+                       "╠ th : thai" + "\n" + \
+                       "╠ tr : turkish" + "\n" + \
+                       "╠ uk : ukrainian" + "\n" + \
+                       "╠ ur : urdu" + "\n" + \
+                       "╠ uz : uzbek" + "\n" + \
+                       "╠ vi : vietnamese" + "\n" + \
+                       "╠ cy : welsh" + "\n" + \
+                       "╠ xh : xhosa" + "\n" + \
+                       "╠ yi : yiddish" + "\n" + \
+                       "╠ yo : yoruba" + "\n" + \
+                       "╠ zu : zulu" + "\n" + \
+                       "╠ fil : Filipino" + "\n" + \
+                       "╠ he : Hebrew" + "\n" + \
+                       "╚══[ Jangan Typo ]" + "\n" + "\n\n" + \
+                         "Contoh : ˢᴬᵞ-ᴵᴰ ᶠᴱᴺᴰᵞ ᴶᴱᴸᴱˣ"
+    return helpTranslate
+#==============================================================================#
+def lineBot(op):
     try:
         if op.type == 0:
-            print ("[ 0 ] Succes")
+            print ("[ 0 ] END OF OPERATION")
             return
-
         if op.type == 5:
-            print ("[ 5 ] Add Contact")
-            if wait["autoAdd"] == True:
-                ririn.findAndAddContactsByMid(op.param1)
-            ririn.sendMessage(op.param1, "╔════════════════════╗\n                   「ᴀᴜᴛᴏ ʀᴇᴘʟʏ」\n                             ʙʏ:\n                    ✰ ᴅɴᴀ ʙᴏᴛ ✰\n╚════════════════════╝\n       ʜᴀʟʟᴏ, ᴛʜᴀɴᴋs ғᴏʀ ᴀᴅᴅ ᴍᴇ\n\n                    ᴏᴘᴇɴ ᴏʀᴅᴇʀ :\n               ✪ sᴇʟғʙᴏᴛ ᴏɴʟʏ ✪\n            ✪ sᴇʟғʙᴏᴛ + ᴀssɪsᴛ ✪\n                ✪ ʙᴏᴛ ᴘʀᴏᴛᴇᴄᴛ ✪\n              「ᴀʟʟ ʙᴏᴛ ᴘʏᴛʜᴏɴ з」\n\n         ᴍɪɴᴀᴛ ᴘᴄ ᴀᴋᴜɴ ᴅɪ ʙᴀᴡᴀʜ :\n        [line.me/ti/p/ppgIZ0JLDW]")
-
+            print ("[ 5 ] NOTIFIED ADD CONTACT")
+            if settings["autoAdd"] == True:
+                line.sendMessage(op.param1, "Halo {} terimakasih telah menambahkan saya sebagai teman :D".format(str(line.getContact(op.param1).displayName)))
         if op.type == 13:
-            print ("[ 13 ] Invite Into Group")
-            if ririnMid in op.param3:
-                if wait["autoJoin"] == True:
-                    ririn.acceptGroupInvitation(op.param1)
-                dan = ririn.getContact(op.param2)
-                tgb = ririn.getGroup(op.param1)
-                ririn.sendMessage(op.param1, "ʜᴀʟᴏ, ᴛʜx ғᴏʀ ɪɴᴠɪᴛᴇ ᴍᴇ")
-                ririn.sendContact(op.param1, op.param2)
-                ririn.sendImageWithURL(op.param1, "http://dl.profile.line-cdn.net{}".format(dan.picturePath))
-                
-        if op.type == 15:
-        	dan = ririn.getContact(op.param2)
-        	tgb = ririn.getGroup(op.param1)
-        	ririn.sendMessage(op.param1, "ɴᴀʜ ᴋᴀɴ ʙᴀᴘᴇʀ 「{}」, ɢᴀᴋ ᴜsᴀʜ ʙᴀʟɪᴋ ᴅɪ {} ʟᴀɢɪ ʏᴀ\nsᴇʟᴀᴍᴀᴛ ᴊᴀʟᴀɴ ᴅᴀɴ sᴇᴍᴏɢᴀʜ ᴛᴇɴᴀɴɢ ᴅɪʟᴜᴀʀ sᴀɴᴀ 😘😘😘".format(str(dan.displayName),str(tgb.name)))
-        	ririn.sendContact(op.param1, op.param2)
-        	ririn.sendImageWithURL(op.param1, "http://dl.profile.line-cdn.net{}".format(dan.picturePath))
-        	
-        if op.type == 17:
-        	dan = ririn.getContact(op.param2)
-        	tgb = ririn.getGroup(op.param1)
-        	sendMention(op.param1, "ʜᴏʟᴀ @!         ,\nᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ {} \nᴊᴀɴɢᴀɴ ʟᴜᴘᴀ ᴄʜᴇᴄᴋ ɴᴏᴛᴇ ʏᴀ \nᴀᴡᴀs ᴋᴀʟᴀᴜ ʙᴀᴘᴇʀᴀɴ 😘😘😘".format(str(tgb.name)),[op.param2])
-        	ririn.sendContact(op.param1, op.param2)
-        	ririn.sendImageWithURL(op.param1, "http://dl.profile.line-cdn.net{}".format(dan.picturePath))
-
-        if op.type == 22:
-            if wait["leaveRoom"] == True:
-                ririn.leaveRoom(op.param1)
-
+            print ("[ 13 ] NOTIFIED INVITE GROUP")
+            group = line.getGroup(op.param1)
+            if settings["autoJoin"] == True:
+                line.acceptGroupInvitation(op.param1)
         if op.type == 24:
-            if wait["leaveRoom"] == True:
-                ririn.leaveRoom(op.param1)
-
+            print ("[ 24 ] NOTIFIED LEAVE ROOM")
+            if settings["autoLeave"] == True:
+                line.leaveRoom(op.param1)
         if op.type == 25:
-            try:
-                print ("[ 25 ] SEND MESSAGE")
-                msg = op.message
-                text = msg.text
-                msg_id = msg.id
-                receiver = msg.to
-                sender = msg._from
-                setKey = wait["keyCommand"].title()
-                if wait["setKey"] == False:
-                    setKey = ''
-                if msg.toType == 0 or msg.toType == 1 or msg.toType == 2:
-                    if msg.toType == 0:
-                        if sender != ririn.profile.mid:
-                            to = sender
-                        else:
-                            to = receiver
-                    elif msg.toType == 1:
-                        to = receiver
-                    elif msg.toType == 2:
-                        to = receiver
-                    if msg.contentType == 0:
-                        if text is None:
-                            return
-                        else:
-                            cmd = command(text)
-                            if cmd == "help":
-                                helpMessage = helpmessage()
-                                ririn.sendMessage(to, str(helpMessage))
-                                ririn.sendContact(to, "ueca4120a9d7b0e4a9e7f4f1b1b96a436")
-                            elif cmd == "tts":
-                                helpTextToSpeech = helptexttospeech()
-                                ririn.sendMessage(to, str(helpTextToSpeech))
-                                ririn.sendContact(to, "ueca4120a9d7b0e4a9e7f4f1b1b96a436")
-                            elif cmd == "translate":
-                                helpTranslate = helptranslate()
-                                ririn.sendMessage(to, str(helpTranslate))
-                                ririn.sendContact(to, "ueca4120a9d7b0e4a9e7f4f1b1b96a436")
-                            elif cmd.startswith("changekey:"):
-                                sep = text.split(" ")
-                                key = text.replace(sep[0] + " ","")
-                                if " " in key:
-                                    ririn.sendMessage(to, "ᴅᴏɴ'ᴛ ᴛʏᴘᴏ ʙʀᴏ")
-                                else:
-                                    wait["keyCommand"] = str(key).lower()
-                                    ririn.sendMessage(to, "sᴜᴄᴄᴇs ᴄʜᴀɴɢᴇ ᴋᴇʏ [ {} ]".format(str(key).lower()))
-                            elif cmd == "sp":
-                            	ririn.sendMessage(to, "❂➣ ʟᴏᴀᴅɪɴɢ...")
-                            	sp = int(round(time.time() *1000))
-                            	ririn.sendMessage(to,"ᴍʏ sᴘᴇᴇᴅ : %sms" % (sp - op.createdTime))
-                            elif cmd == "speed":
-                            	start = time.time()
-                            	ririn.sendMessage(to, "❂➣ ʟᴏᴀᴅɪɴɢ...")
-                            	elapsed_time = time.time() - start
-                            	ririn.sendMessage(to, "ᴍʏ sᴘᴇᴇᴅ : %sms" % (elapsed_time))
-                            elif cmd == "runtime":
-                                timeNow = time.time()
-                                runtime = timeNow - botStart
-                                runtime = format_timespan(runtime)
-                                ririn.sendMessage(to, "ʀᴜɴɴɪɴɢ ɪɴ.. {}".format(str(runtime)))
-                            elif cmd == "restart":
-                                ririn.sendMessage(to, "ʙᴏᴛ ʜᴀᴠᴇ ʙᴇᴇɴ ʀᴇsᴛᴀʀᴛ")
-                                restartBot()
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                            elif cmd == "autoadd on":
-                                wait["autoAdd"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ᴀᴅᴅ ᴏɴ")
-                            elif cmd == "autoadd off":
-                                wait["autoAdd"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ᴀᴅᴅ ᴏғғ")
-                            elif cmd == "autojoin on":
-                                wait["autoJoin"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ᴊᴏɪɴ ᴏɴ")
-                            elif cmd == "autojoin off":
-                                wait["autoJoin"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ᴊᴏɪɴ ᴏɴ ᴏғғ")
-                            elif cmd == "autoleave on":
-                                wait["autoLeave"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʟᴇᴀᴠᴇ ᴏɴ")
-                            elif cmd == "autoleave off":
-                                wait["autoLeave"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʟᴇᴀᴠᴇ ᴏғғ")
-                            elif cmd == "autoresponpc on":
-                                wait["autoResponPc"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ғᴏʀ ᴘᴇʀsᴏɴᴀʟ ᴄʜᴀᴛ ᴏɴ")
-                            elif cmd == "autoresponpc off":
-                                wait["autoResponPc"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ғᴏʀ ᴘᴇʀsᴏɴᴀʟ ᴄʜᴀᴛ ᴏғғ")
-                            elif cmd == "autorespon on":
-                                wait["autoRespon"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ᴏɴ")
-                            elif cmd == "autorespon off":
-                                wait["autoRespon"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ᴏғғ")
-                            elif cmd == "autoread on":
-                                wait["autoRead"] = True
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇᴀᴅ ᴏɴ")
-                            elif cmd == "autoread off":
-                                wait["autoRead"] = False
-                                ririn.sendMessage(to, "ᴀᴜᴛᴏ ʀᴇᴀᴅ ᴏғғ")
-                            elif cmd == "autojointicket on":
-                                wait["autoJoinTicket"] = True
-                                ririn.sendMessage(to, "ᴊᴏɪɴ ʙʏ ᴛɪᴄᴋᴇᴛ ᴏɴ")
-                            elif cmd == "autoJoinTicket off":
-                                wait["autoJoin"] = False
-                                ririn.sendMessage(to, "ᴊᴏɪɴ ʙʏ ᴛɪᴄᴋᴇᴛ ᴏғғ")
-                            elif cmd == "contact on":
-                                wait["checkContact"] = True
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ ᴄᴏɴᴛᴀᴄᴛ ᴏɴ")
-                            elif cmd == "contact off":
-                                wait["checkContact"] = False
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ ᴄᴏɴᴛᴀᴄᴛ ᴏғғ")
-                            elif cmd == "checkpost on":
-                                wait["checkPost"] = True
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ ᴘᴏsᴛ ᴏɴ")
-                            elif cmd == "checkpost off":
-                                wait["checkPost"] = False
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ ᴘᴏsᴛ ᴏғғ")
-                            elif cmd == "checksticker on":
-                                wait["checkSticker"] = True
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ sᴛɪᴄᴋᴇʀ ᴏɴ")
-                            elif cmd == "checksticker off":
-                                wait["checkSticker"] = False
-                                ririn.sendMessage(to, "ᴄʜᴇᴄᴋ sᴛɪᴄᴋᴇʀ ᴏғғ")
-                            elif cmd == "unsendchat on":
-                                wait["unsendMessage"] = True
-                                ririn.sendMessage(to, "ᴜɴsᴇɴᴅ ᴍᴇssᴀɢᴇ ᴏɴ")
-                            elif cmd == "unsendchat off":
-                                wait["unsendMessage"] = False
-                                ririn.sendMessage(to, "ᴜɴsᴇɴᴅ ᴍᴇssᴀɢᴇ ᴏғғ")
-                            elif cmd == "status":
-                                try:
-                                    ret_ = "╔═════[ ·✪·sᴛᴀᴛᴜs·✪· ]═════╗"
-                                    if wait["autoAdd"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ᴀᴅᴅ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ᴀᴅᴅ 「⚫」"
-                                    if wait["autoJoin"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ᴊᴏɪɴ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ᴊᴏɪɴ 「⚫」"
-                                    if wait["autoLeave"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ʟᴇᴀᴠᴇ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ʟᴇᴀᴠᴇ 「⚫」"
-                                    if wait["autoJoinTicket"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴊᴏɪɴ ᴛɪᴄᴋᴇᴛ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴊᴏɪɴ ᴛɪᴄᴋᴇᴛ 「⚫」"
-                                    if wait["autoRead"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ʀᴇᴀᴅ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ʀᴇᴀᴅ 「⚫」"
-                                    if wait["autoRespon"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ 「⚫」"
-                                    if wait["autoResponPc"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ᴘᴄ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴀᴜᴛᴏ ʀᴇsᴘᴏɴ ᴘᴄ 「⚫」"
-                                    if wait["checkContact"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴄʜᴇᴄᴋ ᴄᴏɴᴛᴀᴄᴛ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴄʜᴇᴄᴋ ᴄᴏɴᴛᴀᴄᴛ 「⚫」"
-                                    if wait["checkPost"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴄʜᴇᴄᴋ ᴘᴏsᴛ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴄʜᴇᴄᴋ ᴘᴏsᴛ 「⚫」"
-                                    if wait["checkSticker"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴄʜᴇᴄᴋ sᴛɪᴄᴋᴇʀ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴄʜᴇᴄᴋ sᴛɪᴄᴋᴇʀ 「⚫」"
-                                    if wait["setKey"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] sᴇᴛ ᴋᴇʏ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] sᴇᴛ ᴋᴇʏ 「⚫」"
-                                    if wait["unsendMessage"] == True: ret_ += "\n╠❂➣ [ ᴏɴ ] ᴜɴsᴇɴᴅ ᴍsɢ 「⚪」"
-                                    else: ret_ += "\n╠❂➣ [ ᴏғғ ] ᴜɴsᴇɴᴅ ᴍsɢ 「⚫」"
-                                    ret_ += "\n╚═════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]═════╝"
-                                    ririn.sendMessage(to, str(ret_))
-                                    ririn.sendContact(to, "ueca4120a9d7b0e4a9e7f4f1b1b96a436")
-                                except Exception as e:
-                                    ririn.sendMessage(msg.to, str(e))
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                            elif cmd == "crash":
-                                ririn.sendContact(to, "u1f41296217e740650e0448b96851a3e2',")
-                            elif cmd.startswith("changename:"):
-                                sep = text.split(" ")
-                                string = text.replace(sep[0] + " ","")
-                                if len(string) <= 20:
-                                    profile = ririn.getProfile()
-                                    profile.displayName = string
-                                    ririn.updateProfile(profile)
-                                    ririn.sendMessage(to,"ᴄʜᴀɴɢᴇ ɴᴀᴍᴇ sᴜᴄᴄᴇs :{}".format(str(string)))
-                            elif cmd.startswith("changebio:"):
-                                sep = text.split(" ")
-                                string = text.replace(sep[0] + " ","")
-                                if len(string) <= 500:
-                                    profile = ririn.getProfile()
-                                    profile.statusMessage = string
-                                    ririn.updateProfile(profile)
-                                    ririn.sendMessage(to,"ᴄʜᴀɴɢᴇ ᴘʀᴏғɪʟᴇ sᴜᴄᴄᴇs :{}".format(str(string)))
-                            elif cmd == "me":
-                                ririn.sendContact(to, sender)
-                            elif cmd == "mymid":
-                                ririn.sendMessage(to, "[ ᴍɪᴅ ]\n{}".format(sender))
-                            elif cmd == "myname":
-                                contact = ririn.getContact(sender)
-                                ririn.sendMessage(to, "[ ᴅɪsᴘʟᴀʏ ɴᴀᴍᴇ ]\n{}".format(contact.displayName))
-                            elif cmd == "mybio":
-                                contact = ririn.getContact(sender)
-                                ririn.sendMessage(to, "[ sᴛᴀᴛᴜs ᴍᴇssᴀɢᴇ ]\n{}".format(contact.statusMessage))
-                            elif cmd == "mypicture":
-                                contact = ririn.getContact(sender)
-                                ririn.sendImageWithURL(to,"http://dl.profile.line-cdn.net/{}".format(contact.pictureStatus))
-                            elif cmd == "myvideoprofile":
-                                contact = ririn.getContact(sender)
-                                ririn.sendVideoWithURL(to,"http://dl.profile.line-cdn.net/{}/vp".format(contact.pictureStatus))
-                            elif cmd == "mycover":
-                                channel = ririn.getProfileCoverURL(sender)          
-                                path = str(channel)
-                                ririn.sendImageWithURL(to, path)
-                            elif cmd.startswith ('invitegc '):
-                            	if msg.toType == 2:
-                                    sep = text.split(" ")
-                                    strnum = text.replace(sep[0] + " ","")
-                                    num = int(strnum)
-                                    ririn.sendMessage(to, "sᴜᴄᴄᴇs ɪɴᴠɪᴛᴇ ɢʀᴏᴜᴘ ᴄᴀʟʟ")
-                                    for var in range(0,num):
-                                        group = ririn.getGroup(to)
-                                        members = [mem.mid for mem in group.members]
-                                        ririn.inviteIntoGroupCall(to, contactIds=members)
-                            elif cmd.startswith("cloneprofile "):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    for ls in lists:
-                                        contact = ririn.getContact(ls)
-                                        ririn.cloneContactProfile(ls)
-                                        ririn.sendMessage(to, "ᴄʟᴏɴᴇ ᴘʀᴏғɪʟᴇ sᴜᴄᴄᴇs : {}".format(contact.displayName))
-                            elif cmd == "restoreprofile":
-                                try:
-                                    ririnProfile = ririn.getProfile()
-                                    ririnProfile.displayName = str(wait["myProfile"]["displayName"])
-                                    ririnProfile.statusMessage = str(wait["myProfile"]["statusMessage"])
-                                    ririnProfile.pictureStatus = str(wait["myProfile"]["pictureStatus"])
-                                    ririn.updateProfileAttribute(8, ririnProfile.pictureStatus)
-                                    ririn.updateProfile(ririnProfile)
-                                    coverId = str(wait["myProfile"]["coverId"])
-                                    ririn.updateProfileCoverById(coverId)
-                                    ririn.sendMessage(to, "ʀᴇsᴛᴏʀᴇ ᴘʀᴏғɪʟᴇ sᴜᴄᴄᴇs, ᴡᴀɪᴛ ᴀ ғᴇᴡ ᴍɪɴᴜᴛᴇs")
-                                except Exception as e:
-                                    ririn.sendMessage(to, "ʀᴇsᴛᴏʀᴇ ᴘʀᴏғɪʟᴇ ғᴀɪʟᴇᴅ")
-                                    logError(error)
-                            elif cmd == "backupprofile":
-                                try:
-                                    profile = ririn.getProfile()
-                                    wait["myProfile"]["displayName"] = str(profile.displayName)
-                                    wait["myProfile"]["statusMessage"] = str(profile.statusMessage)
-                                    wait["myProfile"]["pictureStatus"] = str(profile.pictureStatus)
-                                    coverId = ririn.getProfileDetail()["result"]["objectId"]
-                                    wait["myProfile"]["coverId"] = str(coverId)
-                                    ririn.sendMessage(to, "ʙᴀᴄᴋᴜᴘ ᴘʀᴏғɪʟᴇ sᴜᴄᴄᴇs")
-                                except Exception as e:
-                                    ririn.sendMessage(to, "ʙᴀᴄᴋᴜᴘ ᴘʀᴏғɪʟᴇ ғᴀɪʟᴇᴅ")
-                                    logError(error)
-                            elif cmd.startswith("stealmid "):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    ret_ = "[ Mid User ]"
-                                    for ls in lists:
-                                        ret_ += "\n{}".format(str(ls))
-                                    ririn.sendMessage(to, str(ret_))
-                            elif cmd.startswith("stealname "):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    for ls in lists:
-                                        contact = ririn.getContact(ls)
-                                        ririn.sendMessage(to, "[ Display Name ]\n{}".format(str(contact.displayName)))
-                            elif cmd.startswith("stealbio "):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    for ls in lists:
-                                        contact = ririn.getContact(ls)
-                                        ririn.sendMessage(to, "[ sᴛᴀᴛᴜs ᴍᴇssᴀɢᴇ ]\n{}".format(str(contact.statusMessage)))
-                            elif cmd.startswith("stealpicture"):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    for ls in lists:
-                                        contact = ririn.getContact(ls)
-                                        path = "http://dl.profile.line.naver.jp/{}".format(contact.pictureStatus)
-                                        ririn.sendImageWithURL(to, str(path))
-                            elif cmd.startswith("stealvideoprofile "):
-                                if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                    names = re.findall(r'@(\w+)', text)
-                                    mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                    mentionees = mention['MENTIONEES']
-                                    lists = []
-                                    for mention in mentionees:
-                                        if mention["M"] not in lists:
-                                            lists.append(mention["M"])
-                                    for ls in lists:
-                                        contact = ririn.getContact(ls)
-                                        path = "http://dl.profile.line.naver.jp/{}/vp".format(contact.pictureStatus)
-                                        ririn.sendVideoWithURL(to, str(path))
-                            elif cmd.startswith("stealcover "):
-                                if ririn != None:
-                                    if 'MENTION' in msg.contentMetadata.keys()!= None:
-                                        names = re.findall(r'@(\w+)', text)
-                                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                                        mentionees = mention['MENTIONEES']
-                                        lists = []
-                                        for mention in mentionees:
-                                            if mention["M"] not in lists:
-                                                lists.append(mention["M"])
-                                        for ls in lists:
-                                            channel = ririn.getProfileCoverURL(ls)
-                                            path = str(channel)
-                                            ririn.sendImageWithURL(to, str(path))
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                            elif cmd == 'groupcreator':
-                                group = ririn.getGroup(to)
-                                GS = group.creator.mid
-                                ririn.sendContact(to, GS)
-                            elif cmd == 'groupid':
-                                gid = ririn.getGroup(to)
-                                ririn.sendMessage(to, "[ɢʀᴏᴜᴘ ɪᴅ : : ]\n" + gid.id)
-                            elif cmd == 'grouppicture':
-                                group = ririn.getGroup(to)
-                                path = "http://dl.profile.line-cdn.net/" + group.pictureStatus
-                                ririn.sendImageWithURL(to, path)
-                            elif cmd == 'groupname':
-                                gid = ririn.getGroup(to)
-                                ririn.sendMessage(to, "[ɢʀᴏᴜᴘ ɴᴀᴍᴇ : ]\n" + gid.name)
-                            elif cmd == 'groupticket':
-                                if msg.toType == 2:
-                                    group = ririn.getGroup(to)
-                                    if group.preventedJoinByTicket == False:
-                                        ticket = ririn.reissueGroupTicket(to)
-                                        ririn.sendMessage(to, "[ ɢʀᴏᴜᴘ ᴛɪᴄᴋᴇᴛ ]\nhttps://line.me/R/ti/g/{}".format(str(ticket)))
-                                    else:
-                                        ririn.sendMessage(to, "ᴛʜᴇ ǫʀ ɢʀᴏᴜᴘ ɪs ɴᴏᴛ ᴏᴘᴇɴ ᴘʟᴇᴀsᴇ ᴏᴘᴇɴ ɪᴛ ғɪʀsᴛ ᴡɪᴛʜ ᴛʜᴇ ᴄᴏᴍᴍᴀɴᴅ {}openqr".format(str(wait["keyCommand"])))
-                            elif cmd == 'groupticket on':
-                                if msg.toType == 2:
-                                    group = ririn.getGroup(to)
-                                    if group.preventedJoinByTicket == False:
-                                        ririn.sendMessage(to, "ᴀʟʀᴇᴀᴅʏ ᴏᴘᴇɴ")
-                                    else:
-                                        group.preventedJoinByTicket = False
-                                        ririn.updateGroup(group)
-                                        ririn.sendMessage(to, "sᴜᴄᴄᴇs ᴏᴘᴇɴ ǫʀ ɢʀᴏᴜᴘ")
-                            elif cmd == 'groupticket off':
-                                if msg.toType == 2:
-                                    group = ririn.getGroup(to)
-                                    if group.preventedJoinByTicket == True:
-                                        ririn.sendMessage(to, "ᴀʟʀᴇᴀᴅʏ ᴄʟᴏsᴇᴅ")
-                                    else:
-                                        group.preventedJoinByTicket = True
-                                        ririn.updateGroup(group)
-                                        ririn.sendMessage(to, "sᴜᴄᴄᴇs ᴄʟᴏsᴇ ǫʀ ɢʀᴏᴜᴘ")
-                            elif cmd == 'groupinfo':
-                                group = ririn.getGroup(to)
-                                try:
-                                    gCreator = group.creator.displayName
-                                except:
-                                    gCreator = "ɴᴏᴛ ғᴏᴜɴᴅ"
-                                if group.invitee is None:
-                                    gPending = "0"
-                                else:
-                                    gPending = str(len(group.invitee))
-                                if group.preventedJoinByTicket == True:
-                                    gQr = "ᴄʟᴏsᴇᴅ"
-                                    gTicket = "ɴᴏʟ'"
-                                else:
-                                    gQr = "ᴏᴘᴇɴ"
-                                    gTicket = "https://line.me/R/ti/g/{}".format(str(ririn.reissueGroupTicket(group.id)))
-                                path = "http://dl.profile.line-cdn.net/" + group.pictureStatus
-                                ret_ = "╔════[ ·✪ɢʀᴏᴜᴘ ɪɴғᴏ✪· ]════╗"
-                                ret_ += "\n╠❂➣ ɢʀᴏᴜᴘ ɴᴀᴍᴇ : {}".format(str(group.name))
-                                ret_ += "\n╠❂➣ ɢʀᴏᴜᴘ ɪᴅ : {}".format(group.id)
-                                ret_ += "\n╠❂➣ ᴄʀᴇᴀᴛᴏʀ :  {}".format(str(gCreator))
-                                ret_ += "\n╠❂➣ ᴍᴇᴍʙᴇʀ : {}".format(str(len(group.members)))
-                                ret_ += "\n╠❂➣ ᴘᴇɴᴅɪɴɢ : {}".format(gPending)
-                                ret_ += "\n╠❂➣ ǫʀ ɢʀᴏᴜᴘ : {}".format(gQr)
-                                ret_ += "\n╠❂➣ ᴛɪᴄᴋᴇᴛ ɢʀᴏᴜᴘ : {}".format(gTicket)
-                                ret_ += "\n╚═════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]═════╝"
-                                ririn.sendMessage(to, str(ret_))
-                                ririn.sendImageWithURL(to, path)
-                            elif cmd == 'memberlist':
-                                if msg.toType == 2:
-                                    group = ririn.getGroup(to)
-                                    ret_ = "╔══[ ᴍᴇᴍʙᴇʀ  ʟɪsᴛ ]══✪"
-                                    no = 0 + 1
-                                    for mem in group.members:
-                                        ret_ += "\n╠❂➣ {}. {}".format(str(no), str(mem.displayName))
-                                        no += 1
-                                    ret_ += "\n╚═══[ ᴛᴏᴛᴀʟ : {} ]═══✪".format(str(len(group.members)))
-                                    ririn.sendMessage(to, str(ret_))
-                            elif cmd == 'grouplist':
-                                    groups = ririn.groups
-                                    ret_ = "╔═[ ✯ ɢʀᴏᴜᴘ  ʟɪsᴛ ✯ ]═✪"
-                                    no = 0 + 1
-                                    for gid in groups:
-                                        group = ririn.getGroup(gid)
-                                        ret_ += "\n╠❂➣ {}. {} | {}".format(str(no), str(group.name), str(len(group.members)))
-                                        no += 1
-                                    ret_ += "\n╚═══[ ᴛᴏᴛᴀʟ : {} ]═══✪".format(str(len(groups)))
-                                    ririn.sendMessage(to, str(ret_))
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                            elif cmd == "changepictureprofile":
-                                wait["changePictureProfile"] = True
-                                ririn.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
-                            elif cmd == "changegrouppicture":
-                                if msg.toType == 2:
-                                    if to not in wait["changeGroupPicture"]:
-                                        wait["changeGroupPicture"].append(to)
-                                    ririn.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
-                            elif cmd == 'mention':
-                                group = ririn.getGroup(msg.to)
-                                nama = [contact.mid for contact in group.members]
-                                k = len(nama)//100
-                                for a in range(k+1):
-                                    txt = u''
-                                    s=0
-                                    b=[]
-                                    for i in group.members[a*100 : (a+1)*100]:
-                                        b.append({"S":str(s), "E" :str(s+6), "M":i.mid})
-                                        s += 7
-                                        txt += u'@Zero \n'
-                                    ririn.sendMessage(to, text=txt, contentMetadata={u'MENTION': json.dumps({'MENTIONEES':b})}, contentType=0)
-                                    ririn.sendMessage(to, "Total {} Mention".format(str(len(nama))))
-                                    
-                            elif cmd == "sider on":
-                            	try:
-                            		del cctv['point'][msg.to]
-                            		del cctv['sidermem'][msg.to]
-                            		del cctv['cyduk'][msg.to]
-                            	except:
-                            		pass
-                            	cctv['point'][msg.to] = msg.id
-                            	cctv['sidermem'][msg.to] = ""
-                            	cctv['cyduk'][msg.to]=True
-                            	wait["Sider"] = True
-                            	ririn.sendMessage(msg.to,"sɪᴅᴇʀ sᴇᴛ ᴛᴏ ᴏɴ")
-                            elif cmd == "sider off":
-                            	if msg.to in cctv['point']:
-                            		cctv['cyduk'][msg.to]=False
-                            		wait["Sider"] = False
-                            		ririn.sendMessage(msg.to,"sɪᴅᴇʀ sᴇᴛ ᴛᴏ ᴏғғ")
-                            	else:
-                            		ririn.sendMessage(msg.to,"sɪᴅᴇʀ ɴᴏᴛ sᴇᴛ")           
-                            elif cmd == "lurking on":
-                                tz = pytz.timezone("Asia/Makassar")
-                                timeNow = datetime.now(tz=tz)
-                                day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
-                                hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
-                                bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-                                hr = timeNow.strftime("%A")
-                                bln = timeNow.strftime("%m")
-                                for i in range(len(day)):
-                                    if hr == day[i]: hasil = hari[i]
-                                for k in range(0, len(bulan)):
-                                    if bln == str(k): bln = bulan[k-1]
-                                readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
-                                if receiver in read['readPoint']:
-                                    try:
-                                        del read['readPoint'][receiver]
-                                        del read['readMember'][receiver]
-                                        del read['readTime'][receiver]
-                                    except:
-                                        pass
-                                    read['readPoint'][receiver] = msg_id
-                                    read['readMember'][receiver] = ""
-                                    read['readTime'][receiver] = readTime
-                                    read['ROM'][receiver] = {}
-                                    ririn.sendMessage(receiver,"ʟᴜʀᴋɪɴɢ sᴇᴛ ᴏɴ")
-                                else:
-                                    try:
-                                        del read['readPoint'][receiver]
-                                        del read['readMember'][receiver]
-                                        del read['readTime'][receiver]
-                                    except:
-                                        pass
-                                    read['readPoint'][receiver] = msg_id
-                                    read['readMember'][receiver] = ""
-                                    read['readTime'][receiver] = readTime
-                                    read['ROM'][receiver] = {}
-                                    ririn.sendMessage(receiver,"sᴇᴛ ʀᴇᴀᴅɪɴɢ ᴘᴏɪɴᴛ : \n" + readTime)
-                            elif cmd == "lurking off":
-                                tz = pytz.timezone("Asia/Makassar")
-                                timeNow = datetime.now(tz=tz)
-                                day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
-                                hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
-                                bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-                                hr = timeNow.strftime("%A")
-                                bln = timeNow.strftime("%m")
-                                for i in range(len(day)):
-                                    if hr == day[i]: hasil = hari[i]
-                                for k in range(0, len(bulan)):
-                                    if bln == str(k): bln = bulan[k-1]
-                                readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
-                                if receiver not in read['readPoint']:
-                                    ririn.sendMessage(receiver,"ʟᴜʀᴋɪɴɢ sᴇᴛ ᴏғғ")
-                                else:
-                                    try:
-                                        del read['readPoint'][receiver]
-                                        del read['readMember'][receiver]
-                                        del read['readTime'][receiver]
-                                    except:
-                                        pass
-                                    ririn.sendMessage(receiver,"ᴅᴇʟᴇᴛᴇ ʀᴇᴀᴅɪɴɢ ᴘᴏɪɴᴛ : \n" + readTime)
-        
-                            elif cmd == "lurking reset":
-                                tz = pytz.timezone("Asia/Makassar")
-                                timeNow = datetime.now(tz=tz)
-                                day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
-                                hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
-                                bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-                                hr = timeNow.strftime("%A")
-                                bln = timeNow.strftime("%m")
-                                for i in range(len(day)):
-                                    if hr == day[i]: hasil = hari[i]
-                                for k in range(0, len(bulan)):
-                                    if bln == str(k): bln = bulan[k-1]
-                                readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
-                                if msg.to in read["readPoint"]:
-                                    try:
-                                        del read["readPoint"][msg.to]
-                                        del read["readMember"][msg.to]
-                                        del read["readTime"][msg.to]
-                                        del read["ROM"][msg.to]
-                                    except:
-                                        pass
-                                    read['readPoint'][receiver] = msg_id
-                                    read['readMember'][receiver] = ""
-                                    read['readTime'][receiver] = readTime
-                                    read['ROM'][receiver] = {}
-                                    ririn.sendMessage(msg.to, "ʀᴇsᴇᴛ ʀᴇᴀᴅɪɴɢ ᴘᴏɪɴᴛ : \n" + readTime)
-                                else:
-                                    ririn.sendMessage(msg.to, "ʟᴜʀᴋɪɴɢ ɴᴏᴛ ᴀᴋᴛɪᴠᴇ, ᴄᴏᴜʟᴅ ɴᴏᴛ ʙᴇ ʀᴇsᴇᴛ")
-                                    
-                            elif cmd == "lurking":
-                                tz = pytz.timezone("Asia/Makassar")
-                                timeNow = datetime.now(tz=tz)
-                                day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
-                                hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
-                                bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-                                hr = timeNow.strftime("%A")
-                                bln = timeNow.strftime("%m")
-                                for i in range(len(day)):
-                                    if hr == day[i]: hasil = hari[i]
-                                for k in range(0, len(bulan)):
-                                    if bln == str(k): bln = bulan[k-1]
-                                readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
-                                if receiver in read['readPoint']:
-                                    if read["ROM"][receiver].items() == []:
-                                        ririn.sendMessage(receiver,"ɴᴏ sɪᴅᴇʀ")
-                                    else:
-                                        chiya = []
-                                        for rom in read["ROM"][receiver].items():
-                                            chiya.append(rom[1])
-                                        cmem = ririn.getContacts(chiya) 
-                                        zx = ""
-                                        zxc = ""
-                                        zx2 = []
-                                        xpesan = '[ ʀ ᴇ ᴀ ᴅ ᴇ ʀ ]\n'
-                                    for x in range(len(cmem)):
-                                        xname = str(cmem[x].displayName)
-                                        pesan = ''
-                                        pesan2 = pesan+"@c\n"
-                                        xlen = str(len(zxc)+len(xpesan))
-                                        xlen2 = str(len(zxc)+len(pesan2)+len(xpesan)-1)
-                                        zx = {'S':xlen, 'E':xlen2, 'M':cmem[x].mid}
-                                        zx2.append(zx)
-                                        zxc += pesan2
-                                    text = xpesan+ zxc + "\n" + readTime
-                                    try:
-                                        ririn.sendMessage(receiver, text, contentMetadata={'MENTION':str('{"MENTIONEES":'+json.dumps(zx2).replace(' ','')+'}')}, contentType=0)
-                                    except Exception as error:
-                                        print (error)
-                                    pass
-                                else:
-                                    ririn.sendMessage(receiver,"ʟᴜʀᴋɪɴɢ ɴᴏᴛ ᴀᴄᴛɪᴠᴇ")
-                            elif cmd.startswith("mimicadd"):
-                                targets = []
-                                key = eval(msg.contentMetadata["MENTION"])
-                                key["MENTIONEES"][0]["M"]
-                                for x in key["MENTIONEES"]:
-                                    targets.append(x["M"])
-                                for target in targets:
-                                    try:
-                                        wait["mimic"]["target"][target] = True
-                                        ririn.sendMessage(msg.to,"ᴛᴀʀɢᴇᴛ ᴀᴅᴅᴇᴅ")
-                                        break
-                                    except:
-                                        ririn.sendMessage(msg.to,"ғᴀɪʟᴇᴅ ᴀᴅᴅᴇᴅ ᴛᴀʀɢᴇᴛ")
-                                        break
-                            elif cmd.startswith("mimicdel"):
-                                targets = []
-                                key = eval(msg.contentMetadata["MENTION"])
-                                key["MENTIONEES"][0]["M"]
-                                for x in key["MENTIONEES"]:
-                                    targets.append(x["M"])
-                                for target in targets:
-                                    try:
-                                        del wait["mimic"]["target"][target]
-                                        ririn.sendMessage(msg.to,"ᴛᴀɢᴇᴛ ᴅᴇʟᴇᴛᴇᴅ")
-                                        break
-                                    except:
-                                        ririn.sendMessage(msg.to,"ғᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ ᴛᴀʀɢᴇᴛ")
-                                        break
-                                    
-                            elif cmd == "mimiclist":
-                                if wait["mimic"]["target"] == {}:
-                                    ririn.sendMessage(msg.to,"ɴᴏ ᴛᴀʀɢᴇᴛ")
-                                else:
-                                    mc = "╔════[ ·✪·ᴍɪᴍɪᴄ ʟɪsᴛ·✪· ]════╗"
-                                    for mi_d in wait["mimic"]["target"]:
-                                        mc += "\n╠❂➣ "+ririn.getContact(mi_d).displayName
-                                    mc += "\n╚═════[  ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]═════╝"
-                                    ririn.sendMessage(msg.to,mc)
-                                
-                            elif cmd.startswith("mimic"):
-                                sep = text.split(" ")
-                                mic = text.replace(sep[0] + " ","")
-                                if mic == "on":
-                                    if wait["mimic"]["status"] == False:
-                                        wait["mimic"]["status"] = True
-                                        ririn.sendMessage(msg.to,"ᴍɪᴍɪᴄ ᴏɴ")
-                                elif mic == "off":
-                                    if wait["mimic"]["status"] == True:
-                                        wait["mimic"]["status"] = False
-                                        ririn.sendMessage(msg.to,"ᴍɪᴍɪᴄ ᴏғғ")
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                            elif cmd.startswith("checkwebsite"):
-                                try:
-                                    sep = text.split(" ")
-                                    query = text.replace(sep[0] + " ","")
-                                    r = requests.get("http://rahandiapi.herokuapp.com/sswebAPI?key=betakey&link={}".format(urllib.parse.quote(query)))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    ririn.sendImageWithURL(to, data["result"])
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("checkdate"):
-                                try:
-                                    sep = msg.text.split(" ")
-                                    tanggal = msg.text.replace(sep[0] + " ","")
-                                    r = requests.get('https://script.google.com/macros/exec?service=AKfycbw7gKzP-WYV2F5mc9RaR7yE3Ve1yN91Tjs91hp_jHSE02dSv9w&nama=ervan&tanggal='+tanggal)
-                                    data=r.text
-                                    data=json.loads(data)
-                                    ret_ = "[ D A T E ]"
-                                    ret_ += "\nDate Of Birth : {}".format(str(data["data"]["lahir"]))
-                                    ret_ += "\nAge : {}".format(str(data["data"]["usia"]))
-                                    ret_ += "\nBirthday : {}".format(str(data["data"]["ultah"]))
-                                    ret_ += "\nZodiak : {}".format(str(data["data"]["zodiak"]))
-                                    ririn.sendMessage(to, str(ret_))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("checkpraytime "):
-                                separate = msg.text.split(" ")
-                                location = msg.text.replace(separate[0] + " ","")
-                                r = requests.get("http://api.corrykalam.net/apisholat.php?lokasi={}".format(location))
-                                data = r.text
-                                data = json.loads(data)
-                                tz = pytz.timezone("Asia/Makassar")
-                                timeNow = datetime.now(tz=tz)
-                                if data[1] != "sᴜʙᴜʜ : " and data[2] != "ᴅᴢᴜʜᴜʀ : " and data[3] != "ᴀsʜᴀʀ : " and data[4] != "ᴍᴀɢʜʀɪʙ : " and data[5] != "ɪsʜᴀ : ":
-                                    ret_ = "╔═══[ ᴊᴀᴅᴡᴀʟ sʜᴏʟᴀᴛ ]"
-                                    ret_ += "\n╠══[ sᴇᴋɪᴛᴀʀ " + data[0] + " ]"
-                                    ret_ += "\n╠❂➣ ᴛᴀɴɢɢᴀʟ : " + datetime.strftime(timeNow,'%Y-%m-%d')
-                                    ret_ += "\n╠❂➣ ᴊᴀᴍ : " + datetime.strftime(timeNow,'%H:%M:%S')
-                                    ret_ += "\n╠❂➣ " + data[1]
-                                    ret_ += "\n╠❂➣ " + data[2]
-                                    ret_ += "\n╠❂➣ " + data[3]
-                                    ret_ += "\n╠❂➣ " + data[4]
-                                    ret_ += "\n╠❂➣ " + data[5]
-                                    ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                    ririn.sendMessage(msg.to, str(ret_))
-                            elif cmd.startswith("checkweather "):
-                                try:
-                                    sep = text.split(" ")
-                                    location = text.replace(sep[0] + " ","")
-                                    r = requests.get("http://api.corrykalam.net/apicuaca.php?kota={}".format(location))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    tz = pytz.timezone("Asia/Makassar")
-                                    timeNow = datetime.now(tz=tz)
-                                    if "result" not in data:
-                                        ret_ = "╔═══[ ᴡᴇᴀᴛʜᴇʀ sᴛᴀᴛᴜs ]"
-                                        ret_ += "\n╠❂➣ ʟᴏᴄᴀᴛɪᴏɴ : " + data[0].replace("Temperatur di kota ","")
-                                        ret_ += "\n╠❂➣ sᴜʜᴜ : " + data[1].replace("Suhu : ","") + "°ᴄ"
-                                        ret_ += "\n╠❂➣ ᴋᴇʟᴇᴍʙᴀʙᴀɴ : " + data[2].replace("Kelembaban : ","") + "%"
-                                        ret_ += "\n╠❂➣ ᴛᴇᴋᴀɴᴀɴ ᴜᴅᴀʀᴀ : " + data[3].replace("Tekanan udara : ","") + "ʜᴘᴀ "
-                                        ret_ += "\n╠❂➣ ᴋᴇᴄᴇᴘᴀᴛᴀɴ ᴀɴɢɪɴ : " + data[4].replace("Kecepatan angin : ","") + "ᴍ/s"
-                                        ret_ += "\n╠════[ ᴛɪᴍᴇ sᴛᴀᴛᴜs ]"
-                                        ret_ += "\n╠❂➣ ᴛᴀɴɢɢᴀʟ : " + datetime.strftime(timeNow,'%Y-%m-%d')
-                                        ret_ += "\n╠❂➣ ᴊᴀᴍ : " + datetime.strftime(timeNow,'%H:%M:%S') + " ᴡɪʙ"
-                                        ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                        ririn.sendMessage(to, str(ret_))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("checklocation "):
-                                try:
-                                    sep = text.split(" ")
-                                    location = text.replace(sep[0] + " ","")
-                                    r = requests.get("http://api.corrykalam.net/apiloc.php?lokasi={}".format(location))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    if data[0] != "" and data[1] != "" and data[2] != "":
-                                        link = "https://www.google.co.id/maps/@{},{},15z".format(str(data[1]), str(data[2]))
-                                        ret_ = "╔═══[ ʟᴏᴄᴀᴛɪᴏɴ sᴛᴀᴛᴜs ]"
-                                        ret_ += "\n╠❂➣ ʟᴏᴄᴀᴛɪᴏɴ : " + data[0]
-                                        ret_ += "\n╠❂➣  ɢᴏᴏɢʟᴇ ᴍᴀᴘs : " + link
-                                        ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                        ririn.sendMessage(to, str(ret_))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("instainfo"):
-                                try:
-                                    sep = text.split(" ")
-                                    search = text.replace(sep[0] + " ","")
-                                    r = requests.get("https://www.instagram.com/{}/?__a=1".format(search))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    if data != []:
-                                        ret_ = "╔══[ Profile Instagram ]"
-                                        ret_ += "\n╠ Nama : {}".format(str(data["graphql"]["user"]["full_name"]))
-                                        ret_ += "\n╠ Username : {}".format(str(data["graphql"]["user"]["username"]))
-                                        ret_ += "\n╠ Bio : {}".format(str(data["graphql"]["user"]["biography"]))
-                                        ret_ += "\n╠ Pengikut : {}".format(str(data["graphql"]["user"]["edge_followed_by"]["count"]))
-                                        ret_ += "\n╠ Diikuti : {}".format(str(data["graphql"]["user"]["edge_follow"]["count"]))
-                                        if data["graphql"]["user"]["is_verified"] == True:
-                                            ret_ += "\n╠ Verifikasi : Sudah"
-                                        else:
-                                            ret_ += "\n╠ Verifikasi : Belum"
-                                        if data["graphql"]["user"]["is_private"] == True:
-                                            ret_ += "\n╠ Akun Pribadi : Iya"
-                                        else:
-                                            ret_ += "\n╠ Akun Pribadi : Tidak"
-                                        ret_ += "\n╠ Total Post : {}".format(str(data["graphql"]["user"]["edge_owner_to_timeline_media"]["count"]))
-                                        ret_ += "\n╚══[ https://www.instagram.com/{} ]".format(search)
-                                        path = data["graphql"]["user"]["profile_pic_url_hd"]
-                                        ririn.sendImageWithURL(to, str(path))
-                                        ririn.sendMessage(to, str(ret_))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("instapost"):
-                                try:
-                                    sep = text.split(" ")
-                                    text = text.replace(sep[0] + " ","")   
-                                    cond = text.split("|")
-                                    username = cond[0]
-                                    no = cond[1] 
-                                    r = requests.get("http://rahandiapi.herokuapp.com/instapost/{}/{}?key=betakey".format(str(username), str(no)))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    if data["find"] == True:
-                                        if data["media"]["mediatype"] == 1:
-                                            ririn.sendImageWithURL(msg.to, str(data["media"]["url"]))
-                                        if data["media"]["mediatype"] == 2:
-                                            ririn.sendVideoWithURL(msg.to, str(data["media"]["url"]))
-                                        ret_ = "╔══[ Info Post ]"
-                                        ret_ += "\n╠ Jumlah Like : {}".format(str(data["media"]["like_count"]))
-                                        ret_ += "\n╠ Jumlah Comment : {}".format(str(data["media"]["comment_count"]))
-                                        ret_ += "\n╚══[ Caption ]\n{}".format(str(data["media"]["caption"]))
-                                        ririn.sendMessage(to, str(ret_))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("instastory"):
-                                try:
-                                    sep = text.split(" ")
-                                    text = text.replace(sep[0] + " ","")
-                                    cond = text.split("|")
-                                    search = str(cond[0])
-                                    if len(cond) == 2:
-                                        r = requests.get("http://rahandiapi.herokuapp.com/instastory/{}?key=betakey".format(search))
-                                        data = r.text
-                                        data = json.loads(data)
-                                        if data["url"] != []:
-                                            num = int(cond[1])
-                                            if num <= len(data["url"]):
-                                                search = data["url"][num - 1]
-                                                if search["tipe"] == 1:
-                                                    ririn.sendImageWithURL(to, str(search["link"]))
-                                                if search["tipe"] == 2:
-                                                    ririn.sendVideoWithURL(to, str(search["link"]))
-                                except Exception as error:
-                                    logError(error)
-                                    
-                            elif cmd.startswith("say-"):
-                                sep = text.split("-")
-                                sep = sep[1].split(" ")
-                                lang = sep[0]
-                                say = text.replace("say-" + lang + " ","")
-                                if lang not in list_language["list_textToSpeech"]:
-                                    return ririn.sendMessage(to, "ʟᴀɴɢᴜᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ")
-                                tts = gTTS(text=say, lang=lang)
-                                tts.save("hasil.mp3")
-                                ririn.sendAudio(to,"hasil.mp3")
-                                
-                            elif cmd.startswith("searchimage"):
-                                try:
-                                    separate = msg.text.split(" ")
-                                    search = msg.text.replace(separate[0] + " ","")
-                                    r = requests.get("http://rahandiapi.herokuapp.com/imageapi?key=betakey&q={}".format(search))
-                                    data = r.text
-                                    data = json.loads(data)
-                                    if data["result"] != []:
-                                        items = data["result"]
-                                        path = random.choice(items)
-                                        a = items.index(path)
-                                        b = len(items)
-                                        ririn.sendImageWithURL(to, str(path))
-                                except Exception as error:
-                                    logError(error)
-                            elif cmd.startswith("searchmusic "):
-                                sep = msg.text.split(" ")
-                                query = msg.text.replace(sep[0] + " ","")
-                                cond = query.split("|")
-                                search = str(cond[0])
-                                result = requests.get("http://api.ntcorp.us/joox/search?q={}".format(str(search)))
-                                data = result.text
-                                data = json.loads(data)
-                                if len(cond) == 1:
-                                    num = 0
-                                    ret_ = "╔══[ ʀᴇsᴜʟᴛ ᴍᴜsɪᴄ ]"
-                                    for music in data["result"]:
-                                        num += 1
-                                        ret_ += "\n╠ {}. {}".format(str(num), str(music["single"]))
-                                    ret_ += "\n╚══[ ᴛᴏᴛᴀʟ {} ᴍᴜsɪᴄ ] ".format(str(len(data["result"])))
-                                    ret_ += "\n\nᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ᴅᴇᴛᴀɪʟs ᴍᴜsɪᴄ, sɪʟᴀʜᴋᴀɴ ɢᴜɴᴀᴋᴀɴ ᴄᴏᴍᴍᴀɴᴅ {}sᴇᴀʀᴄʜᴍᴜsɪᴄ {}|「ɴᴜᴍʙᴇʀ」".format(str(setKey), str(search))
-                                    ririn.sendMessage(to, str(ret_))
-                                elif len(cond) == 2:
-                                    num = int(cond[1])
-                                    if num <= len(data["result"]):
-                                        music = data["result"][num - 1]
-                                        result = requests.get("http://api.ntcorp.us/joox/song_info?sid={}".format(str(music["sid"])))
-                                        data = result.text
-                                        data = json.loads(data)
-                                        if data["result"] != []:
-                                            ret_ = "╔══════[ ᴍᴜsɪᴄ ]"
-                                            ret_ += "\n╠❂➣ ᴛɪᴛʟᴇ : {}".format(str(data["result"]["song"]))
-                                            ret_ += "\n╠❂➣ ᴀʟʙᴜᴍ : {}".format(str(data["result"]["album"]))
-                                            ret_ += "\n╠❂➣ sɪᴢᴇ : {}".format(str(data["result"]["size"]))
-                                            ret_ += "\n╠❂➣ ʟɪɴᴋ :  {}".format(str(data["result"]["mp3"][0]))
-                                            ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                            ririn.sendImageWithURL(to, str(data["result"]["img"]))
-                                            ririn.sendMessage(to, str(ret_))
-                                            ririn.sendAudioWithURL(to, str(data["result"]["mp3"][0]))
-                            elif cmd.startswith("searchlyric"):
-                                sep = msg.text.split(" ")
-                                query = msg.text.replace(sep[0] + " ","")
-                                cond = query.split("|")
-                                search = cond[0]
-                                api = requests.get("http://api.secold.com/joox/cari/{}".format(str(search)))
-                                data = api.text
-                                data = json.loads(data)
-                                if len(cond) == 1:
-                                    num = 0
-                                    ret_ = "╔══[ ʀᴇsᴜʟᴛ ʟʏʀɪᴄ ]"
-                                    for lyric in data["results"]:
-                                        num += 1
-                                        ret_ += "\n╠❂➣ {}. {}".format(str(num), str(lyric["single"]))
-                                    ret_ += "\n╚══[ ᴛᴏᴛᴀʟ {} ᴍᴜsɪᴄ ]".format(str(len(data["results"])))
-                                    ret_ += "\n\nᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ᴅᴇᴛᴀɪʟs ʟʏʀɪᴄ, sɪʟᴀʜᴋᴀɴ ɢᴜɴᴀᴋᴀɴ ᴄᴏᴍᴍᴀɴᴅ {}sᴇᴀʀᴄʜʟʏʀɪᴄ {}|「ɴᴜᴍʙᴇʀ」".format(str(setKey), str(search))
-                                    ririn.sendMessage(to, str(ret_))
-                                elif len(cond) == 2:
-                                    num = int(cond[1])
-                                    if num <= len(data["results"]):
-                                        lyric = data["results"][num - 1]
-                                        api = requests.get("http://api.secold.com/joox/sid/{}".format(str(lyric["songid"])))
-                                        data = api.text
-                                        data = json.loads(data)
-                                        lyrics = data["results"]["lyric"]
-                                        lyric = lyrics.replace('ti:','Title - ')
-                                        lyric = lyric.replace('ar:','Artist - ')
-                                        lyric = lyric.replace('al:','Album - ')
-                                        removeString = "[1234567890.:]"
-                                        for char in removeString:
-                                            lyric = lyric.replace(char,'')
-                                        ririn.sendMessage(msg.to, str(lyric))
-                            elif cmd.startswith("searchyoutube"):
-                                sep = text.split(" ")
-                                search = text.replace(sep[0] + " ","")
-                                params = {"search_query": search}
-                                r = requests.get("https://www.youtube.com/results", params = params)
-                                soup = BeautifulSoup(r.content, "html5lib")
-                                ret_ = "╔══[ ʀᴇsᴜʟᴛ ʏᴏᴜᴛᴜʙᴇ ]"
-                                datas = []
-                                for data in soup.select(".yt-lockup-title > a[title]"):
-                                    if "&lists" not in data["href"]:
-                                        datas.append(data)
-                                for data in datas:
-                                    ret_ += "\n╠❂➣{} ]".format(str(data["title"]))
-                                    ret_ += "\n╠❂ https://www.youtube.com{}".format(str(data["href"]))
-                                ret_ += "\n╚══[ ᴛᴏᴛᴀʟ {} ᴠɪᴅᴇᴏ ]".format(len(datas))
-                                ririn.sendMessage(to, str(ret_))
-                            elif cmd.startswith("tr-"):
-                                sep = text.split("-")
-                                sep = sep[1].split(" ")
-                                lang = sep[0]
-                                say = text.replace("tr-" + lang + " ","")
-                                if lang not in list_language["list_translate"]:
-                                    return ririn.sendMessage(to, "Language not found")
-                                translator = Translator()
-                                hasil = translator.translate(say, dest=lang)
-                                A = hasil.text
-                                ririn.sendMessage(to, str(A))
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                        if text.lower() == "mykey":
-                            ririn.sendMessage(to, "ᴋᴇʏᴄᴏᴍᴍᴀɴᴅ sᴀᴀᴛ ɪɴɪ [ {} ]".format(str(wait["keyCommand"])))
-                        elif text.lower() == "setkey on":
-                            wait["setKey"] = True
-                            ririn.sendMessage(to, "ʙᴇʀʜᴀsɪʟ ᴍᴇɴɢᴀᴋᴛɪғᴋᴀɴ sᴇᴛᴋᴇʏ")
-                        elif text.lower() == "setkey off":
-                            wait["setKey"] = False
-                            ririn.sendMessage(to, "ʙᴇʀʜᴀsɪʟ ᴍᴇɴᴏɴᴀᴋᴛɪғᴋᴀɴ sᴇᴛᴋᴇʏ")
-#------------------------------------============================------------------------------------#
-#======================-----------✰ ᴅɴᴀ ʙᴏᴛ ✰-----------======================#
-#------------------------------------============================------------------------------------#
-                    elif msg.contentType == 1:
-                        if wait["changePictureProfile"] == True:
-                            path = ririn.downloadObjectMsg(msg_id)
-                            wait["changePictureProfile"] = False
-                            ririn.updateProfilePicture(path)
-                            ririn.sendMessage(to, "sᴜᴄᴄᴇs ᴄʜᴀɴɢᴇ ᴘʜᴏᴛᴏ ᴘʀᴏғɪʟᴇ")
-                        if msg.toType == 2:
-                            if to in wait["changeGroupPicture"]:
-                                path = ririn.downloadObjectMsg(msg_id)
-                                wait["changeGroupPicture"].remove(to)
-                                ririn.updateGroupPicture(to, path)
-                                ririn.sendMessage(to, "sᴜᴄᴄᴇs ᴄʜᴀɴɢᴇ ᴘʜᴏᴛᴏ ɢʀᴏᴜᴘ")
-                    elif msg.contentType == 7:
-                        if wait["checkSticker"] == True:
-                            stk_id = msg.contentMetadata['STKID']
-                            stk_ver = msg.contentMetadata['STKVER']
-                            pkg_id = msg.contentMetadata['STKPKGID']
-                            ret_ = "╔════[ sᴛɪᴄᴋᴇʀ ɪɴғᴏ ] "
-                            ret_ += "\n╠❂➣ sᴛɪᴄᴋᴇʀ ɪᴅ : {}".format(stk_id)
-                            ret_ += "\n╠❂➣ sᴛɪᴄᴋᴇʀ ᴘᴀᴄᴋᴀɢᴇs ɪᴅ : {}".format(pkg_id)
-                            ret_ += "\n╠❂➣ sᴛɪᴄᴋᴇʀ ᴠᴇʀsɪᴏɴ : {}".format(stk_ver)
-                            ret_ += "\n╠❂➣ sᴛɪᴄᴋᴇʀ ᴜʀʟ : line://shop/detail/{}".format(pkg_id)
-                            ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                            ririn.sendMessage(to, str(ret_))
-                    elif msg.contentType == 13:
-                        if wait["checkContact"] == True:
-                            try:
-                                contact = ririn.getContact(msg.contentMetadata["mid"])
-                                if ririn != None:
-                                    cover = ririn.getProfileCoverURL(msg.contentMetadata["mid"])
-                                else:
-                                    cover = "Tidak dapat masuk di line channel"
-                                path = "http://dl.profile.line-cdn.net/{}".format(str(contact.pictureStatus))
-                                try:
-                                    ririn.sendImageWithURL(to, str(path))
-                                except:
-                                    pass
-                                ret_ = "╔═══[ ᴅᴇᴛᴀɪʟs ᴄᴏɴᴛᴀᴄᴛ ]"
-                                ret_ += "\n╠❂➣ ɴᴀᴍᴀ : {}".format(str(contact.displayName))
-                                ret_ += "\n╠❂➣ ᴍɪᴅ : {}".format(str(msg.contentMetadata["mid"]))
-                                ret_ += "\n╠❂➣ ʙɪᴏ : {}".format(str(contact.statusMessage))
-                                ret_ += "\n╠❂➣ ɢᴀᴍʙᴀʀ ᴘʀᴏғɪʟᴇ : http://dl.profile.line-cdn.net/{}".format(str(contact.pictureStatus))
-                                ret_ += "\n╠❂➣ ɢᴀᴍʙᴀʀ ᴄᴏᴠᴇʀ : {}".format(str(cover))
-                                ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                ririn.sendMessage(to, str(ret_))
-                            except:
-                                ririn.sendMessage(to, "ᴋᴏɴᴛᴀᴋ ᴛɪᴅᴀᴋ ᴠᴀʟɪᴅ")
-                    elif msg.contentType == 16:
-                        if wait["checkPost"] == True:
-                            try:
-                                ret_ = "╔════[ ᴅᴇᴛᴀɪʟs ᴘᴏsᴛ ]"
-                                if msg.contentMetadata["serviceType"] == "GB":
-                                    contact = ririn.getContact(sender)
-                                    auth = "\n╠❂➣ ᴀᴜᴛʜᴏʀ : {}".format(str(contact.displayName))
-                                else:
-                                    auth = "\n╠❂➣ ᴀᴜᴛʜᴏʀ : {}".format(str(msg.contentMetadata["serviceName"]))
-                                purl = "\n╠❂➣ ᴜʀʟ : {}".format(str(msg.contentMetadata["postEndUrl"]).replace("line://","https://line.me/R/"))
-                                ret_ += auth
-                                ret_ += purl
-                                if "mediaOid" in msg.contentMetadata:
-                                    object_ = msg.contentMetadata["mediaOid"].replace("svc=myhome|sid=h|","")
-                                    if msg.contentMetadata["mediaType"] == "V":
-                                        if msg.contentMetadata["serviceType"] == "GB":
-                                            ourl = "\n╠❂➣ ᴏʙᴊᴇᴄᴛ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?tid=612w&{}".format(str(msg.contentMetadata["mediaOid"]))
-                                            murl = "\n╠❂➣ ᴍᴇᴅɪᴀ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?{}".format(str(msg.contentMetadata["mediaOid"]))
-                                        else:
-                                            ourl = "\n╠❂➣ ᴏʙᴊᴇᴄᴛ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?tid=612w&{}".format(str(object_))
-                                            murl = "\n╠❂➣ ᴍᴇᴅɪᴀ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?{}".format(str(object_))
-                                        ret_ += murl
-                                    else:
-                                        if msg.contentMetadata["serviceType"] == "GB":
-                                            ourl = "\n╠❂➣ ᴏʙᴊᴇᴄᴛ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?tid=612w&{}".format(str(msg.contentMetadata["mediaOid"]))
-                                        else:
-                                            ourl = "\n╠❂➣ ᴏʙᴊᴇᴄᴛ ᴜʀʟ : https://obs-us.line-apps.com/myhome/h/download.nhn?tid=612w&{}".format(str(object_))
-                                    ret_ += ourl
-                                if "stickerId" in msg.contentMetadata:
-                                    stck = "\n╠❂➣ sᴛɪᴄᴋᴇʀ : https://line.me/R/shop/detail/{}".format(str(msg.contentMetadata["packageId"]))
-                                    ret_ += stck
-                                if "text" in msg.contentMetadata:
-                                    text = "\n╠❂➣ ɴᴏᴛᴇ : {}".format(str(msg.contentMetadata["text"]))
-                                    ret_ += text
-                                ret_ += "\n╚════[ ✯ ᴅɴᴀ ʙᴏᴛ ✯ ]"
-                                ririn.sendMessage(to, str(ret_))
-                            except:
-                                ririn.sendMessage(to, "ɪɴᴠᴀʟɪᴅ ᴘᴏsᴛ")
-            except Exception as error:
-                logError(error)
-                traceback.print_tb(error.__traceback__)
-                
-        if op.type == 26:
+            print ("[ 25 ] SEND MESSAGE")
             msg = op.message
-            if wait["autoResponPc"] == True:
-                if msg.toType == 0:
-                    ririn.sendChatChecked(msg._from,msg.id)
-                    contact = ririn.getContact(msg._from)
-                    cName = contact.displayName
-                    balas = ["╔════════════════════╗\n                   「ᴀᴜᴛᴏ ʀᴇᴘʟʏ」\n                             ʙʏ:\n                    ✰ ᴅɴᴀ ʙᴏᴛ ✰\n╚════════════════════╝\n\nʜᴀʟʟᴏ 「" + cName + "」\nᴍᴏʜᴏɴ ᴍᴀᴀғ sᴀʏᴀ sᴇᴅᴀɴɢ sɪʙᴜᴋ, ɪɴɪ ᴀᴅᴀʟᴀʜ ᴘᴇsᴀɴ ᴏᴛᴏᴍᴀᴛɪs, ᴊɪᴋᴀ ᴀᴅᴀ ʏᴀɴɢ ᴘᴇɴᴛɪɴɢ ᴍᴏʜᴏɴ ʜᴜʙᴜɴɢɪ sᴀʏᴀ ɴᴀɴᴛɪ, ᴛᴇʀɪᴍᴀᴋᴀsɪʜ...","╔════════════════════╗\n                   「ᴀᴜᴛᴏ ʀᴇᴘʟʏ」\n                             ʙʏ:\n                    ✰ ᴅɴᴀ ʙᴏᴛ ✰\n╚════════════════════╝\n\nʜᴀʟʟᴏ 「" + cName + "」\nsᴀʏᴀ ʟᴀɢɪ sɪʙᴜᴋ ʏᴀ ᴋᴀᴋ ᴊᴀɴɢᴀɴ ᴅɪɢᴀɴɢɢᴜ","╔════════════════════╗\n                   「ᴀᴜᴛᴏ ʀᴇᴘʟʏ」\n                             ʙʏ:\n                    ✰ ᴅɴᴀ ʙᴏᴛ ✰\n╚════════════════════╝\n\nʜᴀʟʟᴏ 「" + cName + "」\nsᴀʏᴀ sᴇᴅᴀɴɢ ᴛɪᴅᴜʀ ᴋᴀᴋ"]
-                    dee = "" + random.choice(balas)
-                    ririn.sendImageWithURL(msg._from, "http://dl.profile.line-cdn.net{}".format(contact.picturePath))
-                    ririn.sendMessage(msg._from,dee)
-                
-        if op.type == 26:
-            try:
-                print ("[ 26 ] RECIEVE MESSAGE")
-                msg = op.message
-                text = msg.text
-                msg_id = msg.id
-                receiver = msg.to
-                sender = msg._from
-                if msg.toType == 0 or msg.toType == 1 or msg.toType == 2:
-                    if msg.toType == 0:
-                        if sender != ririn.profile.mid:
-                            to = sender
-                        else:
-                            to = receiver
-                    elif msg.toType == 1:
-                        to = receiver
-                    elif msg.toType == 2:
-                        to = receiver
-                    if wait["autoRead"] == True:
-                        ririn.sendChatChecked(to, msg_id)
-                    if to in read["readPoint"]:
-                        if sender not in read["ROM"][to]:
-                            read["ROM"][to][sender] = True
-                    if sender in wait["mimic"]["target"] and wait["mimic"]["status"] == True and wait["mimic"]["target"][sender] == True:
-                        text = msg.text
-                        if text is not None:
-                            ririn.sendMessage(msg.to,text)
-                    if wait["unsendMessage"] == True:
-                        try:
-                            msg = op.message
-                            if msg.toType == 0:
-                                ririn.log("[{} : {}]".format(str(msg._from), str(msg.text)))
-                            else:
-                                ririn.log("[{} : {}]".format(str(msg.to), str(msg.text)))
-                                msg_dict[msg.id] = {"text": msg.text, "from": msg._from, "createdTime": msg.createdTime, "contentType": msg.contentType, "contentMetadata": msg.contentMetadata}
-                        except Exception as error:
-                            logError(error)
-                    if msg.contentType == 0:
-                        if text is None:
-                            return
-                        if "/ti/g/" in msg.text.lower():
-                            if wait["autoJoinTicket"] == True:
-                                link_re = re.compile('(?:line\:\/|line\.me\/R)\/ti\/g\/([a-zA-Z0-9_-]+)?')
-                                links = link_re.findall(text)
-                                n_links = []
-                                for l in links:
-                                    if l not in n_links:
-                                        n_links.append(l)
-                                for ticket_id in n_links:
-                                    group = ririn.findGroupByTicket(ticket_id)
-                                    ririn.acceptGroupInvitationByTicket(group.id,ticket_id)
-                                    ririn.sendMessage(to, "sᴜᴄᴄᴇssғᴜʟʟʏ ᴇɴᴛᴇʀᴇᴅ ᴛʜᴇ ɢʀᴏᴜᴘ %s" % str(group.name))
+            text = msg.text
+            msg_id = msg.id
+            receiver = msg.to
+            sender = msg._from
+            if msg.toType == 0:
+                if sender != line.profile.mid:
+                    to = sender
+                else:
+                    to = receiver
+            else:
+                to = receiver
+            if msg.contentType == 0:
+                if text is None:
+                    return
+#==============================================================================#
+                if text.lower() == 'help':
+                    helpMessage = helpmessage()
+                    line.sendMessage(to, str(helpMessage))
+                    line.sendContact(to, "u0a00a391145594006b682770275d06f0")
+                elif text.lower() == 'texttospeech':
+                    helpTextToSpeech = helptexttospeech()
+                    line.sendMessage(to, str(helpTextToSpeech))
+                elif text.lower() == 'translate':
+                    helpTranslate = helptranslate()
+                    line.sendMessage(to, str(helpTranslate))
+#==============================================================================#
+                elif text.lower() == 'speed':
+                    start = time.time()
+                    line.sendMessage(to, "ρℓєα¢є ωαιтιиg")
+                    elapsed_time = time.time() - start
+                    line.sendMessage(to,format(str(elapsed_time)))
+                elif text.lower() == 'restart':
+                    line.sendMessage(to, "ℓєα¢є ωαιтιиg")
+                    line.sendMessage(to, "∂σиє яєѕтαятιиg")
+                    restartBot()
+                elif text.lower() == 'runtime':
+                    timeNow = time.time()
+                    runtime = timeNow - botStart
+                    runtime = format_timespan(runtime)
+                    line.sendMessage(to, "тнє вσт нαѕ вєєи яυииιиg {}".format(str(runtime)))
+                elif text.lower() == 'about':
+                    try:
+                        arr = []
+                        owner = "u0a00a391145594006b682770275d06f0"
+                        creator = line.getContact(owner)
+                        contact = line.getContact(lineMID)
+                        grouplist = line.getGroupIdsJoined()
+                        contactlist = line.getAllContactIds()
+                        blockedlist = line.getBlockedContactIds()
+                        ret_ = "╔══[ About Self ]"
+                        ret_ += "\n╠ Line : {}".format(contact.displayName)
+                        ret_ += "\n╠ Group : {}".format(str(len(grouplist)))
+                        ret_ += "\n╠ Friend : {}".format(str(len(contactlist)))
+                        ret_ += "\n╠ Blocked : {}".format(str(len(blockedlist)))
+                        ret_ += "\n╠══[ About Selfbot ]"
+                        ret_ += "\n╠ Version : Beta Test"
+                        ret_ += "\n╠ Creator : {}".format(creator.displayName)
+                        ret_ += "\n╚══[ Ｈｅｌｌｏ Ｗｏｒｌｄ ]"
+                        line.sendMessage(to, str(ret_))
+                    except Exception as e:
+                        line.sendMessage(msg.to, str(e))
+#==============================================================================#
+                elif text.lower() == 'status':
+                    try:
+                        ret_ = "╔══[ Status ]"
+                        if settings["autoAdd"] == True: ret_ += "\n╠ Auto Add ✅"
+                        else: ret_ += "\n╠ Auto Add ❌"
+                        if settings["autoJoin"] == True: ret_ += "\n╠ Auto Join ✅"
+                        else: ret_ += "\n╠ Auto Join ❌"
+                        if settings["autoLeave"] == True: ret_ += "\n╠ Auto Leave ✅"
+                        else: ret_ += "\n╠ Auto Leave ❌"
+                        if settings["autoRead"] == True: ret_ += "\n╠ Auto Read ✅"
+                        else: ret_ += "\n╠ Auto Read ❌"
+                        if settings["checkSticker"] == True: ret_ += "\n╠ Check Sticker ✅"
+                        else: ret_ += "\n╠ Check Sticker ❌"
+                        if settings["detectMention"] == True: ret_ += "\n╠ Detect Mention ✅"
+                        else: ret_ += "\n╠ Detect Mention ❌"
+                        ret_ += "\n╚══[ Status ]"
+                        line.sendMessage(to, str(ret_))
+                    except Exception as e:
+                        line.sendMessage(msg.to, str(e))
+                elif text.lower() == 'autoadd on':
+                    settings["autoAdd"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Auto Add")
+                elif text.lower() == 'autoadd off':
+                    settings["autoAdd"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Auto Add")
+                elif text.lower() == 'autojoin on':
+                    settings["autoJoin"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Auto Join")
+                elif text.lower() == 'autojoin off':
+                    settings["autoJoin"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Auto Join")
+                elif text.lower() == 'autoleave on':
+                    settings["autoLeave"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Auto Leave")
+                elif text.lower() == 'autojoin off':
+                    settings["autoLeave"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Auto Leave")
+                elif text.lower() == 'autoread on':
+                    settings["autoRead"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Auto Read")
+                elif text.lower() == 'autoread off':
+                    settings["autoRead"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Auto Read")
+                elif text.lower() == 'checksticker on':
+                    settings["checkSticker"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Check Details Sticker")
+                elif text.lower() == 'checksticker off':
+                    settings["checkSticker"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Check Details Sticker")
+                elif text.lower() == 'detectmention on':
+                    settings["datectMention"] = True
+                    line.sendMessage(to, "Berhasil mengaktifkan Detect Mention")
+                elif text.lower() == 'detectmention off':
+                    settings["datectMention"] = False
+                    line.sendMessage(to, "Berhasil menonaktifkan Detect Mention")
+#==============================================================================#
+                elif text.lower() == 'me':
+                    sendMessageWithMention(to, lineMID)
+                    line.sendContact(to, lineMID)
+                elif text.lower() == 'mymid':
+                    line.sendMessage(msg.to,"[MID]\n" +  lineMID)
+                elif text.lower() == 'myname':
+                    me = line.getContact(lineMID)
+                    line.sendMessage(msg.to,"[DisplayName]\n" + me.displayName)
+                elif text.lower() == 'mybio':
+                    me = line.getContact(lineMID)
+                    line.sendMessage(msg.to,"[StatusMessage]\n" + me.statusMessage)
+                elif text.lower() == 'mypicture':
+                    me = line.getContact(lineMID)
+                    line.sendImageWithURL(msg.to,"http://dl.profile.line-cdn.net/" + me.pictureStatus)
+                elif text.lower() == 'myvideoprofile':
+                    me = line.getContact(lineMID)
+                    line.sendVideoWithURL(msg.to,"http://dl.profile.line-cdn.net/" + me.pictureStatus + "/vp")
+                elif text.lower() == 'mycover':
+                    me = line.getContact(lineMID)
+                    cover = line.getProfileCoverURL(lineMID)    
+                    line.sendImageWithURL(msg.to, cover)
+                elif msg.text.lower().startswith("stealcontact "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        for ls in lists:
+                            contact = line.getContact(ls)
+                            mi_d = contact.mid
+                            line.sendContact(msg.to, mi_d)
+                elif msg.text.lower().startswith("stealmid "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        ret_ = "[ Mid User ]"
+                        for ls in lists:
+                            ret_ += "\n{}" + ls
+                        line.sendMessage(msg.to, str(ret_))
+                elif msg.text.lower().startswith("stealname "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        for ls in lists:
+                            contact = line.getContact(ls)
+                            line.sendMessage(msg.to, "[ Display Name ]\n" + contact.displayName)
+                elif msg.text.lower().startswith("stealbio "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        for ls in lists:
+                            contact = line.getContact(ls)
+                            line.sendMessage(msg.to, "[ Status Message ]\n{}" + contact.statusMessage)
+                elif msg.text.lower().startswith("stealpicture "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        for ls in lists:
+                            path = "http://dl.profile.line.naver.jp/" + line.getContact(ls).pictureStatus
+                            line.sendImageWithURL(msg.to, str(path))
+                elif msg.text.lower().startswith("stealvideoprofile "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        lists = []
+                        for mention in mentionees:
+                            if mention["M"] not in lists:
+                                lists.append(mention["M"])
+                        for ls in lists:
+                            path = "http://dl.profile.line.naver.jp/" + line.getContact(ls).pictureStatus + "/vp"
+                            line.sendImageWithURL(msg.to, str(path))
+                elif msg.text.lower().startswith("stealcover "):
+                    if line != None:
                         if 'MENTION' in msg.contentMetadata.keys()!= None:
                             names = re.findall(r'@(\w+)', text)
                             mention = ast.literal_eval(msg.contentMetadata['MENTION'])
                             mentionees = mention['MENTIONEES']
                             lists = []
                             for mention in mentionees:
-                                if ririnMid in mention["M"]:
-                                    if wait["autoRespon"] == True:
-                                    	ririn.sendChatChecked(msg._from,msg.id)
-                                    	contact = ririn.getContact(msg._from)
-                                    	ririn.sendImageWithURL(msg._from, "http://dl.profile.line-cdn.net{}".format(contact.picturePath))
+                                if mention["M"] not in lists:
+                                    lists.append(mention["M"])
+                            for ls in lists:
+                                path = line.getProfileCoverURL(ls)
+                                line.sendImageWithURL(msg.to, str(path))
+                elif msg.text.lower().startswith("cloneprofile "):
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                        names = re.findall(r'@(\w+)', text)
+                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                        mentionees = mention['MENTIONEES']
+                        for mention in mentionees:
+                            contact = mention["M"]
+                            break
+                        try:
+                            line.cloneContactProfile(contact)
+                            line.sendMessage(msg.to, "Berhasil clone member tunggu beberapa saat sampai profile berubah")
+                        except:
+                            line.sendMessage(msg.to, "Gagal clone member")
+                elif text.lower() == 'restoreprofile':
+                    try:
+                        lineProfile.displayName = str(myProfile["displayName"])
+                        lineProfile.statusMessage = str(myProfile["statusMessage"])
+                        lineProfile.pictureStatus = str(myProfile["pictureStatus"])
+                        line.updateProfileAttribute(8, lineProfile.pictureStatus)
+                        line.updateProfile(lineProfile)
+                        line.sendMessage(msg.to, "Berhasil restore profile tunggu beberapa saat sampai profile berubah")
+                    except:
+                        line.sendMessage(msg.to, "Gagal restore profile")
+#==============================================================================#
+                elif msg.text.lower().startswith("mimicadd "):
+                    targets = []
+                    key = eval(msg.contentMetadata["MENTION"])
+                    key["MENTIONEES"][0]["M"]
+                    for x in key["MENTIONEES"]:
+                        targets.append(x["M"])
+                    for target in targets:
+                        try:
+                            settings["mimic"]["target"][target] = True
+                            line.sendMessage(msg.to,"Target ditambahkan!")
+                            break
+                        except:
+                            line.sendMessage(msg.to,"Added Target Fail !")
+                            break
+                elif msg.text.lower().startswith("mimicdel "):
+                    targets = []
+                    key = eval(msg.contentMetadata["MENTION"])
+                    key["MENTIONEES"][0]["M"]
+                    for x in key["MENTIONEES"]:
+                        targets.append(x["M"])
+                    for target in targets:
+                        try:
+                            del settings["mimic"]["target"][target]
+                            line.sendMessage(msg.to,"Target dihapuskan!")
+                            break
+                        except:
+                            line.sendMessage(msg.to,"Deleted Target Fail !")
+                            break
+                elif text.lower() == 'mimiclist':
+                    if settings["mimic"]["target"] == {}:
+                        line.sendMessage(msg.to,"Tidak Ada Target")
+                    else:
+                        mc = "╔══[ Mimic List ]"
+                        for mi_d in settings["mimic"]["target"]:
+                            mc += "\n╠ "+line.getContact(mi_d).displayName
+                        line.sendMessage(msg.to,mc + "\n╚══[ Finish ]")
+                    
+                elif "mimic" in msg.text.lower():
+                    sep = text.split(" ")
+                    mic = text.replace(sep[0] + " ","")
+                    if mic == "on":
+                        if settings["mimic"]["status"] == False:
+                            settings["mimic"]["status"] = True
+                            line.sendMessage(msg.to,"Reply Message on")
+                    elif mic == "off":
+                        if settings["mimic"]["status"] == True:
+                            settings["mimic"]["status"] = False
+                            line.sendMessage(msg.to,"Reply Message off")
+#==============================================================================#
+                elif text.lower() == 'groupcreator':
+                    group = line.getGroup(to)
+                    GS = group.creator.mid
+                    line.sendContact(to, GS)
+                elif text.lower() == 'groupid':
+                    gid = line.getGroup(to)
+                    line.sendMessage(to, "[ID Group : ]\n" + gid.id)
+                elif text.lower() == 'grouppicture':
+                    group = line.getGroup(to)
+                    path = "http://dl.profile.line-cdn.net/" + group.pictureStatus
+                    line.sendImageWithURL(to, path)
+                elif text.lower() == 'groupname':
+                    gid = line.getGroup(to)
+                    line.sendMessage(to, "[Nama Group : ]\n" + gid.name)
+                elif text.lower() == 'groupticket':
+                    if msg.toType == 2:
+                        group = line.getGroup(to)
+                        if group.preventedJoinByTicket == False:
+                            ticket = line.reissueGroupTicket(to)
+                            line.sendMessage(to, "[ Group Ticket ]\nhttps://line.me/R/ti/g/{}".format(str(ticket)))
+                        else:
+                            line.sendMessage(to, "Grup qr tidak terbuka silahkan buka terlebih dahulu dengan perintah {}openqr".format(str(settings["keyCommand"])))
+                elif text.lower() == 'groupticket on':
+                    if msg.toType == 2:
+                        group = line.getGroup(to)
+                        if group.preventedJoinByTicket == False:
+                            line.sendMessage(to, "Grup qr sudah terbuka")
+                        else:
+                            group.preventedJoinByTicket = False
+                            line.updateGroup(group)
+                            line.sendMessage(to, "Berhasil membuka grup qr")
+                elif text.lower() == 'groupticket off':
+                    if msg.toType == 2:
+                        group = line.getGroup(to)
+                        if group.preventedJoinByTicket == True:
+                            line.sendMessage(to, "Grup qr sudah tertutup")
+                        else:
+                            group.preventedJoinByTicket = True
+                            line.updateGroup(group)
+                            line.sendMessage(to, "Berhasil menutup grup qr")
+                elif text.lower() == 'groupinfo':
+                    group = line.getGroup(to)
+                    try:
+                        gCreator = group.creator.displayName
+                    except:
+                        gCreator = "Tidak ditemukan"
+                    if group.invitee is None:
+                        gPending = "0"
+                    else:
+                        gPending = str(len(group.invitee))
+                    if group.preventedJoinByTicket == True:
+                        gQr = "Tertutup"
+                        gTicket = "Tidak ada"
+                    else:
+                        gQr = "Terbuka"
+                        gTicket = "https://line.me/R/ti/g/{}".format(str(line.reissueGroupTicket(group.id)))
+                    path = "http://dl.profile.line-cdn.net/" + group.pictureStatus
+                    ret_ = "╔══[ Group Info ]"
+                    ret_ += "\n╠ Nama Group : {}".format(str(group.name))
+                    ret_ += "\n╠ ID Group : {}".format(group.id)
+                    ret_ += "\n╠ Pembuat : {}".format(str(gCreator))
+                    ret_ += "\n╠ Jumlah Member : {}".format(str(len(group.members)))
+                    ret_ += "\n╠ Jumlah Pending : {}".format(gPending)
+                    ret_ += "\n╠ Group Qr : {}".format(gQr)
+                    ret_ += "\n╠ Group Ticket : {}".format(gTicket)
+                    ret_ += "\n╚══[ Finish ]"
+                    line.sendMessage(to, str(ret_))
+                    line.sendImageWithURL(to, path)
+                elif text.lower() == 'groupmemberlist':
+                    if msg.toType == 2:
+                        group = line.getGroup(to)
+                        ret_ = "╔══[ Member List ]"
+                        no = 0 + 1
+                        for mem in group.members:
+                            ret_ += "\n╠ {}. {}".format(str(no), str(mem.displayName))
+                            no += 1
+                        ret_ += "\n╚══[ Total {} ]".format(str(len(group.members)))
+                        line.sendMessage(to, str(ret_))
+                elif text.lower() == 'grouplist':
+                        groups = line.groups
+                        ret_ = "╔══[ Group List ]"
+                        no = 0 + 1
+                        for gid in groups:
+                            group = line.getGroup(gid)
+                            ret_ += "\n╠ {}. {} | {}".format(str(no), str(group.name), str(len(group.members)))
+                            no += 1
+                        ret_ += "\n╚══[ Total {} Groups ]".format(str(len(groups)))
+                        line.sendMessage(to, str(ret_))
+                elif text.lower() == 'ceksider':
+                                try:
+                                    del cctv['point'][receiver]
+                                    del cctv['sidermem'][receiver]
+                                    del cctv['cyduk'][receiver]
+                                except:
+                                    pass
+                                cctv['point'][receiver] = msg.id
+                                cctv['sidermem'][receiver] = ""
+                                cctv['cyduk'][receiver]=True
+                elif text.lower() == 'offread':
+                                if msg.to in cctv['point']:
+                                    cctv['cyduk'][receiver]=False
+                                    line.sendText(receiver, cctv['sidermem'][msg.to])
+
+                elif text.lower() == 'welcome on':
+                   if settings["Sambutan"] == True:
+                       if settings["lang"] == "JP":
+                           line.sendMessage(msg.to,"Sudah Onヽ(´▽｀)/")
+                   else:
+                       settings["Sambutan"] = True
+                       if settings["lang"] == "JP":
+                           line.sendMessage(msg.to,"Sambutan Di Aktifkanヾ(*´∀｀*)ﾉ")
+
+                elif text.lower() == 'welcome off':
+                   if settings["Sambutan"] == False:
+                       if settings["lang"] == "JP":
+                          line.sendMessage(msg.to,"Sudah Off(p′︵‵。)")
+                   else: 
+                       settings["Sambutan"] = False
+                       if settings["lang"] == "JP":
+                           line.sendMessage(msg.to,"Sambutan Di Nonaktifkan(　＾∇＾)")
+
+# Pembatas Script #
+                            elif cmd == "changepictureprofile":
+                                wait["changePictureProfile"] = True
+                                line.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
+                            elif cmd == "changegrouppicture":
+                                if msg.toType == 2:
+                                    if to not in wait["changeGroupPicture"]:
+                                        wait["changeGroupPicture"].append(to)
+                                    line.sendMessage(to, "sᴇɴᴅ ᴘɪᴄᴛᴜʀᴇ")
+                            elif cmd == 'mention':
+                                group = line.getGroup(msg.to)
+                                nama = [contact.mid for contact in group.members]
+                                k = len(nama)//20
+                                for a in range(k+1):
+                                    txt = u''
+                                    s=0
+                                    b=[]
+                                    for i in group.members[a*20 : (a+1)*20]:
+                                        b.append({"S":str(s), "E" :str(s+6), "M":i.mid})
+                                        s += 7
+                                        txt += u'@Zero \n'
+                                    line.sendMessage(to, text=txt, contentMetadata={u'MENTION': json.dumps({'MENTIONEES':b})}, contentType=0)
+                                    line.sendMessage(to, "Total {} Mention".format(str(len(nama))))
+#===================================================================#
+                elif text.lower() == 'changepictureprofile':
+                            settings["changePicture"] = True
+                            line.sendMessage(to, "Silahkan kirim gambarnya")
+                elif text.lower() == 'changegrouppicture':
+                            if msg.toType == 2:
+                                if to not in settings["changeGroupPicture"]:
+                                    settings["changeGroupPicture"].append(to)
+                                line.sendMessage(to, "Silahkan kirim gambarnya")
+
+
+#==============================================
+
+                elif text.lower() == 'lurking on':
+                    tz = pytz.timezone("Asia/Jakarta")
+                    timeNow = datetime.now(tz=tz)
+                    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
+                    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+                    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+                    hr = timeNow.strftime("%A")
+                    bln = timeNow.strftime("%m")
+                    for i in range(len(day)):
+                        if hr == day[i]: hasil = hari[i]
+                    for k in range(0, len(bulan)):
+                        if bln == str(k): bln = bulan[k-1]
+                    readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
+                    if msg.to in read['readPoint']:
+                            try:
+                                del read['readPoint'][msg.to]
+                                del read['readMember'][msg.to]
+                                del read['readTime'][msg.to]
+                            except:
+                                pass
+                            read['readPoint'][msg.to] = msg.id
+                            read['readMember'][msg.to] = ""
+                            read['readTime'][msg.to] = datetime.now().strftime('%H:%M:%S')
+                            read['ROM'][msg.to] = {}
+                            with open('read.json', 'w') as fp:
+                                json.dump(read, fp, sort_keys=True, indent=4)
+                                line.sendMessage(msg.to,"Lurking already on")
+                    else:
+                        try:
+                            del read['readPoint'][msg.to]
+                            del read['readMember'][msg.to]
+                            del read['readTime'][msg.to]
+                        except:
+                            pass
+                        read['readPoint'][msg.to] = msg.id
+                        read['readMember'][msg.to] = ""
+                        read['readTime'][msg.to] = datetime.now().strftime('%H:%M:%S')
+                        read['ROM'][msg.to] = {}
+                        with open('read.json', 'w') as fp:
+                            json.dump(read, fp, sort_keys=True, indent=4)
+                            line.sendMessage(msg.to, "Set reading point:\n" + readTime)
+                            
+                elif text.lower() == 'lurking off':
+                    tz = pytz.timezone("Asia/Jakarta")
+                    timeNow = datetime.now(tz=tz)
+                    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
+                    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+                    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+                    hr = timeNow.strftime("%A")
+                    bln = timeNow.strftime("%m")
+                    for i in range(len(day)):
+                        if hr == day[i]: hasil = hari[i]
+                    for k in range(0, len(bulan)):
+                        if bln == str(k): bln = bulan[k-1]
+                    readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
+                    if msg.to not in read['readPoint']:
+                        line.sendMessage(msg.to,"Lurking already off")
+                    else:
+                        try:
+                            del read['readPoint'][msg.to]
+                            del read['readMember'][msg.to]
+                            del read['readTime'][msg.to]
+                        except:
+                              pass
+                        line.sendMessage(msg.to, "Delete reading point:\n" + readTime)
+    
+                elif text.lower() == 'lurking reset':
+                    tz = pytz.timezone("Asia/Jakarta")
+                    timeNow = datetime.now(tz=tz)
+                    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
+                    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+                    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+                    hr = timeNow.strftime("%A")
+                    bln = timeNow.strftime("%m")
+                    for i in range(len(day)):
+                        if hr == day[i]: hasil = hari[i]
+                    for k in range(0, len(bulan)):
+                        if bln == str(k): bln = bulan[k-1]
+                    readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
+                    if msg.to in read["readPoint"]:
+                        try:
+                            del read["readPoint"][msg.to]
+                            del read["readMember"][msg.to]
+                            del read["readTime"][msg.to]
+                        except:
+                            pass
+                        line.sendMessage(msg.to, "Reset reading point:\n" + readTime)
+                    else:
+                        line.sendMessage(msg.to, "Lurking belum diaktifkan ngapain di reset?")
+                        
+                elif text.lower() == 'lurking':
+                    tz = pytz.timezone("Asia/Jakarta")
+                    timeNow = datetime.now(tz=tz)
+                    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
+                    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+                    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+                    hr = timeNow.strftime("%A")
+                    bln = timeNow.strftime("%m")
+                    for i in range(len(day)):
+                        if hr == day[i]: hasil = hari[i]
+                    for k in range(0, len(bulan)):
+                        if bln == str(k): bln = bulan[k-1]
+                    readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
+                    if receiver in read['readPoint']:
+                        if read["ROM"][receiver].items() == []:
+                            line.sendMessage(receiver,"[ Reader ]:\nNone")
+                        else:
+                            chiya = []
+                            for rom in read["ROM"][receiver].items():
+                                chiya.append(rom[1])
+                            cmem = line.getContacts(chiya) 
+                            zx = ""
+                            zxc = ""
+                            zx2 = []
+                            xpesan = '[ Reader ]:\n'
+                        for x in range(len(cmem)):
+                            xname = str(cmem[x].displayName)
+                            pesan = ''
+                            pesan2 = pesan+"@c\n"
+                            xlen = str(len(zxc)+len(xpesan))
+                            xlen2 = str(len(zxc)+len(pesan2)+len(xpesan)-1)
+                            zx = {'S':xlen, 'E':xlen2, 'M':cmem[x].mid}
+                            zx2.append(zx)
+                            zxc += pesan2
+                        text = xpesan+ zxc + "\n[ Lurking time ]: \n" + readTime
+                        try:
+                            line.sendMessage(receiver, text, contentMetadata={'MENTION':str('{"MENTIONEES":'+json.dumps(zx2).replace(' ','')+'}')}, contentType=0)
+                        except Exception as error:
+                            print (error)
+                        pass
+                    else:
+                        line.sendMessage(receiver,"Lurking has not been set.")
+
+                elif text.lower() == 'sider on':
+                    try:
+                        del cctv['point'][msg.to]
+                        del cctv['sidermem'][msg.to]
+                        del cctv['cyduk'][msg.to]
+                    except:
+                        pass
+                    cctv['point'][msg.to] = msg.id
+                    cctv['sidermem'][msg.to] = ""
+                    cctv['cyduk'][msg.to]=True 
+                    settings["Sider"] = True
+                    line.sendMessage(msg.to,"Cek Sider already on")
+
+                elif text.lower() == 'sider off':
+                    if msg.to in cctv['point']:
+                       cctv['cyduk'][msg.to]=False
+                       settings["Sider"] = False
+                       line.sendMessage(msg.to,"Cek Sider already off")
+                    else:
+                        line.sendMessage(msg.to,"Cek Sider already off")
+
+#==============================================================================#
+                elif msg.text.lower().startswith("say-af "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'af'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+        
+                elif msg.text.lower().startswith("say-sq "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'sq'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ar "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ar'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-hy "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'hy'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-bn "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'bn'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ca "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ca'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-zh "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'zh'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-zh-cn "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'zh-cn'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-zh-tw "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'zh-tw'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-zh-yue "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'zh-yue'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-hr "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'hr'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-cs "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'cs'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-da "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'da'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-nl "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'nl'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-en "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'en'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-en-au "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'en-au'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-en-uk "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'en-uk'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-en-us "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'en-us'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-eo "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'eo'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-fi "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'fi'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-fr "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'fr'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-de "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'de'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-el "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'el'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-hi "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'hi'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-hu "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'hu'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-is "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'is'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-id "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'id'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-it "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'it'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ja "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ja'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-km "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'km'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ko "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ko'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-la "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'la'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-lv "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'lv'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-mk "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'mk'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-no "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'no'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-pl "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'pl'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-pt "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'pt'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-do "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ro'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ru "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ru'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-sr "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'sr'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-si "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'si'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-sk "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'sk'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-es "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'es'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-es-es "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'es-es'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-es-us "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'es-us'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-sw "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'sw'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-sv "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'sv'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-ta "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'ta'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-th "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'th'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-tr "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'tr'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-uk "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'uk'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-vi "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'vi'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+                    
+                elif msg.text.lower().startswith("say-cy "):
+                    sep = text.split(" ")
+                    say = text.replace(sep[0] + " ","")
+                    lang = 'cy'
+                    tts = gTTS(text=say, lang=lang)
+                    tts.save("hasil.mp3")
+                    line.sendAudio(msg.to,"hasil.mp3")
+#==============================================================================# 
+                elif msg.text.lower().startswith("tr-af "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='af')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sq "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sq')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-am "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='am')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ar "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ar')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-hy "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='hy')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-az "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='az')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-eu "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='eu')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-be "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='be')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-bn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='bn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-bs "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='bs')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-bg "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='bg')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ca "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ca')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ceb "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ceb')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ny "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ny')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-zh-cn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='zh-cn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-zh-tw "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='zh-tw')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-co "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='co')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-hr "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='hr')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-cs "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='cs')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-da "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='da')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-nl "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='nl')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-en "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='en')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-et "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='et')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-fi "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='fi')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-fr "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='fr')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-fy "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='fy')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-gl "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='gl')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ka "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ka')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-de "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='de')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-el "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='el')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-gu "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='gu')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ht "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ht')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ha "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ha')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-haw "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='haw')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-iw "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='iw')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-hi "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='hi')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-hmn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='hmn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-hu "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='hu')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-is "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='is')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ig "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ig')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-id "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='id')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ga "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ga')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-it "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='it')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ja "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ja')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-jw "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='jw')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-kn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='kn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-kk "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='kk')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-km "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='km')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ko "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ko')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ku "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ku')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ky "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ky')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-lo "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='lo')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-la "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='la')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-lv "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='lv')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-lt "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='lt')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-lb "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='lb')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mk "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mk')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mg "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mg')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ms "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ms')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ml "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ml')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mt "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mt')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mi "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mi')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mr "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mr')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-mn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='mn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-my "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='my')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ne "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ne')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-no "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='no')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ps "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ps')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-fa "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='fa')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-pl "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='pl')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-pt "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='pt')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-pa "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='pa')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ro "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ro')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ru "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ru')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sm "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sm')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-gd "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='gd')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sr "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sr')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-st "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='st')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sn "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sn')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sd "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sd')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-si "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='si')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sk "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sk')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sl "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sl')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-so "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='so')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-es "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='es')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-su "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='su')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sw "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sw')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-sv "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='sv')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-tg "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='tg')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ta "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ta')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-te "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='te')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-th "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='th')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-tr "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='tr')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-uk "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='uk')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-ur "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='ur')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-uz "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='uz')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-vi "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='vi')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-cy "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='cy')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-xh "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='xh')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-yi "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='yi')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-yo "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='yo')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-zu "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='zu')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-fil "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='fil')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+                elif msg.text.lower().startswith("tr-he "):
+                    sep = text.split(" ")
+                    isi = text.replace(sep[0] + " ","")
+                    translator = Translator()
+                    hasil = translator.translate(isi, dest='he')
+                    A = hasil.text
+                    line.sendMessage(msg.to, A)
+#==============================================================================#   
+                elif "spamtag @" in msg.text.lower():
+                   _name = msg.text.replace("spamtag @","")
+                   _nametarget = _name.rstrip(' ')
+                   gs = line.getGroup(msg.to)
+                   for g in gs.members:
+                       if _nametarget == g.displayName:
+                        xname = g.displayName
+                        xlen = str(len(xname)+1)
+                        msg.contentType = 0
+                        msg.text = "@"+xname+" "
+                        msg.contentMetadata ={'MENTION':'{"MENTIONEES":[{"S":"0","E":'+json.dumps(xlen)+',"M":'+json.dumps(g.mid)+'}]}','EMTVER':'4'}
+                        line.sendMetion(msg)
+                        line.sendMention(msg)
+                        line.sendMetion(msg)
+
+
+
+                elif msg.text.lower().startswith("/ "):
+                   txt = text.split(" ")
+                   jmlh = int(txt[2])
+                   teks = text.replace(" "+str(txt[1])+" "+str(jmlh)+ " ","")
+                   tulisan = jmlh * (teks+"\n")
+                   if txt[1] == "on":
+                        if jmlh <= 10000:
+                             for x in range(jmlh):
+                                   line.sendMessage(msg.to, teks)
+                        else:
+                               line.sendMessage(msg.to, "Out of range! ")
+                   elif txt[1] == "off":
+                         if jmlh <= 10000:
+                               line.sendMessage(msg.to, tulisan)
+                         else:
+                               line.sendMessage(msg.to, "Out of range! ")
+
+                elif "nuke" in msg.text.lower():
+                  if msg.toType == 2:
+#                    print  ("ok")
+                    _name = msg.text.replace("nuke","")
+                    gs = line.getGroup(msg.to)
+                    targets = []
+                    for g in gs.members:
+                        if _name in g.displayName:
+                            targets.append(g.mid)
+                    if targets == []:
+                        line.sendMessage(msg.to,"Not found.")
+                    else:
+                        for target in targets:
+                                line.kickoutFromGroup(msg.to,[target])
+                                print (msg.to,[g.mid])
+
+
+                elif "invitegroupcall" in msg.text.lower():
+                            if msg.toType == 2:
+                                sep = text.split(" ")
+                                strnum = text.replace(sep[0] + " ","")
+                                num = int(strnum)
+                                line.sendMessage(to, "Berhasil mengundang kedalam telponan group")
+                                for var in range(0,num):
+                                    group = line.getGroup(to)
+                                    members = [mem.mid for mem in group.members]
+                                    line.acquireGroupCallRoute(to)
+                                    line.inviteIntoGroupCall(to, contactIds=members)
+
+                elif text.lower().startswith("music2 "):
+                            try:
+                                search = text.lower().replace("music2 ","")
+                                r = requests.get("https://farzain.xyz/api/joox.php?apikey=your_api_key&id={}".format(urllib.parse.quote(search))) #untuk api key bisa requests ke web http://www.farzain.xyz/requests.php
+                                data = r.text
+                                data = json.loads(data)
+                                info = data["info"]
+                                audio = data["audio"]
+                                hasil = " Hasil Musik \n"
+                                hasil += "\nPenyanyi : {}".format(str(info["penyanyi"]))
+                                hasil += "\nJudul : {}".format(str(info["judul"]))
+                                hasil += "\nAlbum : {}".format(str(info["album"]))
+                                hasil += "\n\nLink : \n1. Image : {}".format(str(data["gambar"]))
+                                hasil += "\n\nLink : \n2. MP3 : {}".format(str(audio["mp3"]))
+                                hasil += "\n\nLink : \n3. M4A : {}".format(str(audio["m4a"]))
+                                line.sendImageWithURL(msg.to, str(data["gambar"]))
+                                line.sendMessage(msg.to, "Downloading...")
+                                line.sendAudioWithURL(msg.to, str(audio["mp3"]))
+                                line.sendVideoWithURL(msg.to, str(audio["m4a"]))
+                                line.sendMessage(msg.to, "Success Download...")
+                            except Exception as error:
+                            	line.sendMessage(msg.to, " Result Error \n" + str(error))
+
+
+                elif text.lower() == 'kalender':
+                    tz = pytz.timezone("Asia/Makassar")
+                    timeNow = datetime.now(tz=tz)
+                    day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday"]
+                    hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
+                    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+                    hr = timeNow.strftime("%A")
+                    bln = timeNow.strftime("%m")
+                    for i in range(len(day)):
+                        if hr == day[i]: hasil = hari[i]
+                    for k in range(0, len(bulan)):
+                        if bln == str(k): bln = bulan[k-1]
+                    readTime = hasil + ", " + timeNow.strftime('%d') + " - " + bln + " - " + timeNow.strftime('%Y') + "\nJam : [ " + timeNow.strftime('%H:%M:%S') + " ]"
+                    line.sendMessage(msg.to, readTime)                 
+                elif "screenshotwebsite" in msg.text.lower():
+                    sep = text.split(" ")
+                    query = text.replace(sep[0] + " ","")
+                    with requests.session() as web:
+                        r = web.get("http://rahandiapi.herokuapp.com/sswebAPI?key=betakey&link={}".format(urllib.parse.quote(query)))
+                        data = r.text
+                        data = json.loads(data)
+                        line.sendImageWithURL(to, data["result"])
+                elif "checkdate" in msg.text.lower():
+                    sep = msg.text.split(" ")
+                    tanggal = msg.text.replace(sep[0] + " ","")
+                    r=requests.get('https://script.google.com/macros/exec?service=AKfycbw7gKzP-WYV2F5mc9RaR7yE3Ve1yN91Tjs91hp_jHSE02dSv9w&nama=ervan&tanggal='+tanggal)
+                    data=r.text
+                    data=json.loads(data)
+                    ret_ = "╔══[ D A T E ]"
+                    ret_ += "\n╠ Date Of Birth : {}".format(str(data["data"]["lahir"]))
+                    ret_ += "\n╠ Age : {}".format(str(data["data"]["usia"]))
+                    ret_ += "\n╠ Birthday : {}".format(str(data["data"]["ultah"]))
+                    ret_ += "\n╠ Zodiak : {}".format(str(data["data"]["zodiak"]))
+                    ret_ += "\n╚══[ Success ]"
+                    line.sendMessage(to, str(ret_))
+                elif "instagraminfo" in msg.text.lower():
+                    sep = text.split(" ")
+                    search = text.replace(sep[0] + " ","")
+                    with requests.session() as web:
+                        web.headers["User-Agent"] = random.choice(settings["userAgent"])
+                        r = web.get("https://www.instagram.com/{}/?__a=1".format(search))
+                        try:
+                            data = json.loads(r.text)
+                            ret_ = "╔══[ Profile Instagram ]"
+                            ret_ += "\n╠ Nama : {}".format(str(data["user"]["full_name"]))
+                            ret_ += "\n╠ Username : {}".format(str(data["user"]["username"]))
+                            ret_ += "\n╠ Bio : {}".format(str(data["user"]["biography"]))
+                            ret_ += "\n╠ Pengikut : {}".format(format_number(data["user"]["followed_by"]["count"]))
+                            ret_ += "\n╠ Diikuti : {}".format(format_number(data["user"]["follows"]["count"]))
+                            if data["user"]["is_verified"] == True:
+                                ret_ += "\n╠ Verifikasi : Sudah"
+                            else:
+                                ret_ += "\n╠ Verifikasi : Belum"
+                            if data["user"]["is_private"] == True:
+                                ret_ += "\n╠ Akun Pribadi : Iya"
+                            else:
+                                ret_ += "\n╠ Akun Pribadi : Tidak"
+                            ret_ += "\n╠ Total Post : {}".format(format_number(data["user"]["media"]["count"]))
+                            ret_ += "\n╚══[ https://www.instagram.com/{} ]".format(search)
+                            path = data["user"]["profile_pic_url_hd"]
+                            line.sendImageWithURL(to, str(path))
+                            line.sendMessage(to, str(ret_))
+                        except:
+                            line.sendMessage(to, "Pengguna tidak ditemukan")
+                elif "instagrampost" in msg.text.lower():
+                    separate = msg.text.split(" ")
+                    user = msg.text.replace(separate[0] + " ","")
+                    profile = "https://www.instagram.com/" + user
+                    with requests.session() as x:
+                        x.headers['user-agent'] = 'Mozilla/5.0'
+                        end_cursor = ''
+                        for count in range(1, 999):
+                            print('PAGE: ', count)
+                            r = x.get(profile, params={'max_id': end_cursor})
+                        
+                            data = re.search(r'window._sharedData = (\{.+?});</script>', r.text).group(1)
+                            j    = json.loads(data)
+                        
+                            for node in j['entry_data']['ProfilePage'][0]['user']['media']['nodes']: 
+                                if node['is_video']:
+                                    page = 'https://www.instagram.com/p/' + node['code']
+                                    r = x.get(page)
+                                    url = re.search(r'"video_url": "([^"]+)"', r.text).group(1)
+                                    print(url)
+                                    line.sendVideoWithURL(msg.to,url)
+                                else:
+                                    print (node['display_src'])
+                                    line.sendImageWithURL(msg.to,node['display_src'])
+                            end_cursor = re.search(r'"end_cursor": "([^"]+)"', r.text).group(1)
+                elif "searchimage" in msg.text.lower():
+                    separate = msg.text.split(" ")
+                    search = msg.text.replace(separate[0] + " ","")
+                    with requests.session() as web:
+                        web.headers["User-Agent"] = random.choice(settings["userAgent"])
+                        r = web.get("http://rahandiapi.herokuapp.com/imageapi?key=betakey&q={}".format(urllib.parse.quote(search)))
+                        data = r.text
+                        data = json.loads(data)
+                        if data["result"] != []:
+                            items = data["result"]
+                            path = random.choice(items)
+                            a = items.index(path)
+                            b = len(items)
+                            line.sendImageWithURL(to, str(path))
+                elif "searchyoutube" in msg.text.lower():
+                    sep = text.split(" ")
+                    search = text.replace(sep[0] + " ","")
+                    params = {"search_query": search}
+                    with requests.session() as web:
+                        web.headers["User-Agent"] = random.choice(settings["userAgent"])
+                        r = web.get("https://www.youtube.com/results", params = params)
+                        soup = BeautifulSoup(r.content, "html5lib")
+                        ret_ = "╔══[ Youtube Result ]"
+                        datas = []
+                        for data in soup.select(".yt-lockup-title > a[title]"):
+                            if "&lists" not in data["href"]:
+                                datas.append(data)
+                        for data in datas:
+                            ret_ += "\n╠══[ {} ]".format(str(data["title"]))
+                            ret_ += "\n╠ https://www.youtube.com{}".format(str(data["href"]))
+                        ret_ += "\n╚══[ Total {} ]".format(len(datas))
+                        line.sendMessage(to, str(ret_))
+                elif "searchmusic" in msg.text.lower():
+                    sep = text.split(" ")
+                    search = text.replace(sep[0] + " ","")
+                    params = {'songname': search}
+                    with requests.session() as web:
+                        web.headers["User-Agent"] = random.choice(settings["userAgent"])
+                        r = web.get("https://ide.fdlrcn.com/workspace/yumi-apis/joox?" + urllib.parse.urlencode(params))
+                        try:
+                            data = json.loads(r.text)
+                            for song in data:
+                                ret_ = "╔══[ Music ]"
+                                ret_ += "\n╠ Nama lagu : {}".format(str(song[0]))
+                                ret_ += "\n╠ Durasi : {}".format(str(song[1]))
+                                ret_ += "\n╠ Link : {}".format(str(song[4]))
+                                ret_ += "\n╚══[ reading Audio ]"
+                                line.sendMessage(to, str(ret_))
+                                line.sendAudioWithURL(to, song[3])
+                        except:
+                            line.sendMessage(to, "Musik tidak ditemukan")
+                elif "searchlyric" in msg.text.lower():
+                    sep = text.split(" ")
+                    search = text.replace(sep[0] + " ","")
+                    params = {'songname': search}
+                    with requests.session() as web:
+                        web.headers["User-Agent"] = random.choice(settings["userAgent"])
+                        r = web.get("https://ide.fdlrcn.com/workspace/yumi-apis/joox?" + urllib.parse.urlencode(params))
+                        try:
+                            data = json.loads(r.text)
+                            for song in data:
+                                songs = song[5]
+                                lyric = songs.replace('ti:','Title - ')
+                                lyric = lyric.replace('ar:','Artist - ')
+                                lyric = lyric.replace('al:','Album - ')
+                                removeString = "[1234567890.:]"
+                                for char in removeString:
+                                    lyric = lyric.replace(char,'')
+                                ret_ = "╔══[ Lyric ]"
+                                ret_ += "\n╠ Nama lagu : {}".format(str(song[0]))
+                                ret_ += "\n╠ Durasi : {}".format(str(song[1]))
+                                ret_ += "\n╠ Link : {}".format(str(song[4]))
+                                ret_ += "\n╚══[ Finish ]\n{}".format(str(lyric))
+                                line.sendMessage(to, str(ret_))
+                        except:
+                            line.sendMessage(to, "Lirik tidak ditemukan")
+            elif msg.contentType == 7:
+                if settings["checkSticker"] == True:
+                    stk_id = msg.contentMetadata['STKID']
+                    stk_ver = msg.contentMetadata['STKVER']
+                    pkg_id = msg.contentMetadata['STKPKGID']
+                    ret_ = "╔══[ Sticker Info ]"
+                    ret_ += "\n╠ STICKER ID : {}".format(stk_id)
+                    ret_ += "\n╠ STICKER PACKAGES ID : {}".format(pkg_id)
+                    ret_ += "\n╠ STICKER VERSION : {}".format(stk_ver)
+                    ret_ += "\n╠ STICKER URL : line://shop/detail/{}".format(pkg_id)
+                    ret_ += "\n╚══[ Finish ]"
+                    line.sendMessage(to, str(ret_))
+
+            elif msg.contentType == 1:
+                    if settings["changePicture"] == True:
+                        path = line.downloadObjectMsg(msg_id)
+                        settings["changePicture"] = False
+                        line.updateProfilePicture(path)
+                        line.sendMessage(to, "Berhasil mengubah foto profile")
+                    if msg.toType == 2:
+                        if to in settings["changeGroupPicture"]:
+                            path = line.downloadObjectMsg(msg_id)
+                            settings["changeGroupPicture"].remove(to)
+                            line.updateGroupPicture(to, path)
+                            line.sendMessage(to, "Berhasil mengubah foto group")
+
+
+#==============================================================================#
+        if op.type == 26:
+            print ("[ 26 ] RECEIVE MESSAGE")
+            msg = op.message
+            text = msg.text
+            msg_id = msg.id
+            receiver = msg.to
+            sender = msg._from
+            if msg.toType == 0:
+                if sender != line.profile.mid:
+                    to = sender
+                else:
+                    to = receiver
+            else:
+                to = receiver
+                if settings["autoRead"] == True:
+                    line.sendChatChecked(to, msg_id)
+                if to in read["readPoint"]:
+                    if sender not in read["ROM"][to]:
+                        read["ROM"][to][sender] = True
+                if sender in settings["mimic"]["target"] and settings["mimic"]["status"] == True and settings["mimic"]["target"][sender] == True:
+                    text = msg.text
+                    if text is not None:
+                        line.sendMessage(msg.to,text)
+                if msg.contentType == 0 and sender not in lineMID and msg.toType == 2:
+                    if 'MENTION' in msg.contentMetadata.keys()!= None:
+                            names = re.findall(r'@(\w+)', text)
+                            mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                            mentionees = mention['MENTIONEES']
+                            lists = []
+                            for mention in mentionees:
+                                if lineMid in mention["M"]:
+                                    if wait["detectMention"] == True:
+                                    	line.sendChatChecked(msg._from,msg.id)
+                                    	contact = line.getContact(msg._from)
+                                    	line.sendImageWithURL(msg._from, "http://dl.profile.line-cdn.net{}".format(contact.picturePath))
                                     	sendMention(sender, "ᴏɪ ᴍʙʟᴏ @!      ,\nɴɢᴀᴘᴀɪɴ ᴛᴀɢ ᴛᴀɢ ɢᴡ", [sender])
                                     	dee = "" + random.choice(balas)
                                     break
-            except Exception as error:
-                logError(error)
-                traceback.print_tb(error.__traceback__)
-        if op.type == 65:
-            print ("[ 65 ] NOTIFIED DESTROY MESSAGE")
-            if wait["unsendMessage"] == True:
-                try:
-                    at = op.param1
-                    msg_id = op.param2
-                    if msg_id in msg_dict:
-                        if msg_dict[msg_id]["from"]:
-                            contact = ririn.getContact(msg_dict[msg_id]["from"])
-                            if contact.displayNameOverridden != None:
-                                name_ = contact.displayNameOverridden
-                            else:
-                                name_ = contact.displayName
-                                ret_ = "sᴇɴᴅ ᴍᴇssᴀɢᴇ ᴄᴀɴᴄᴇʟʟᴇᴅ."
-                                ret_ += "\nsᴇɴᴅᴇʀ : @!      "
-                                ret_ += "\nsᴇɴᴅ ᴀᴛ : {}".format(str(dt_to_str(cTime_to_datetime(msg_dict[msg_id]["createdTime"]))))
-                                ret_ += "\nᴛʏᴘᴇ : {}".format(str(Type._VALUES_TO_NAMES[msg_dict[msg_id]["contentType"]]))
-                                ret_ += "\nᴛᴇxᴛ : {}".format(str(msg_dict[msg_id]["text"]))
-                                sendMention(at, str(ret_), [contact.mid])
-                            del msg_dict[msg_id]
-                        else:
-                            ririn.sendMessage(at,"sᴇɴᴛᴍᴇssᴀɢᴇ ᴄᴀɴᴄᴇʟʟᴇᴅ,ʙᴜᴛ ɪ ᴅɪᴅɴ'ᴛ ʜᴀᴠᴇ ʟᴏɢ ᴅᴀᴛᴀ.\nsᴏʀʀʏ > <")
-                except Exception as error:
-                    logError(error)
-                    traceback.print_tb(error.__traceback__)
-                    
+
+        if op.type == 17:
+           print ("MEMBER JOIN TO GROUP")
+           if settings["Sambutan"] == True:
+             if op.param2 in lineMID:
+                 return
+             ginfo = line.getGroup(op.param1)
+             contact = line.getContact(op.param2)
+             image = "http://dl.profile.line.naver.jp/" + contact.pictureStatus
+             line.sendMessage(op.param1,"Hi " + line.getContact(op.param2).displayName + "\nWelcome To ☞ " + str(ginfo.name) + " ☜" + "\njangan lupa tikung aim\nDan Semoga Betah Disini ye ^_^")
+             line.sendImageWithURL(op.param1,image)
+
+        if op.type == 15:
+           print ("MEMBER LEAVE TO GROUP")
+           if settings["Sambutan"] == True:
+             if op.param2 in lineMID:
+                 return
+             ginfo = line.getGroup(op.param1)
+             contact = line.getContact(op.param2)
+             image = "http://dl.profile.line.naver.jp/" + contact.pictureStatus
+             line.sendImageWithURL(op.param1,image)
+             line.sendMessage(op.param1,"Good Bye " + line.getContact(op.param2).displayName + "\nSee You Next Time . . . (p′︵‵。)")
+#==============================================================================#
         if op.type == 55:
-        	try:
-        		group_id = op.param1
-        		user_id=op.param2
-        		subprocess.Popen('echo "'+ user_id+'|'+str(op.createdTime)+'" >> dataSeen/%s.txt' % group_id, shell=True, stdout=subprocess.PIPE, )
-        	except Exception as e:
-        		print(e)
-	      
-        if op.type == 55:
-                try:
-                    if cctv['cyduk'][op.param1]==True:
-                        if op.param1 in cctv['point']:
-                            Name = ririn.getContact(op.param2).displayName
-                            if Name in cctv['sidermem'][op.param1]:
-                                pass
-                            else:
-                                cctv['sidermem'][op.param1] += "\n• " + Name
-                                if " " in Name:
-                                    nick = Name.split(' ')
-                                    if len(nick) == 2:
-                                        ririn.sendMessage(op.param1, "ᴡᴏʏ " + "☞ " + Name + " ☜" + "\nᴅɪᴇᴍ ᴅɪᴇᴍ ʙᴀᴇ...\nsɪɴɪ ɪᴋᴜᴛ ɴɢᴏᴘɪ  ")
-                                    else:
-                                        ririn.sendMessage(op.param1, "ᴍʙʟᴏ " + "☞ " + Name + " ☜" + "\nɴɢɪɴᴛɪᴘ ᴅᴏᴀɴɢ ʟᴜ\nsɪɴɪ ɢᴀʙᴜɴɢ  ")
-                                else:
-                                    ririn.sendMessage(op.param1, "ᴛᴏɴɢ " + "☞ " + Name + " ☜" + "\nɴɢᴀᴘᴀɪɴ ʟᴜ...\nɢᴀʙᴜɴɢ ᴄʜᴀᴛ sɪɴɪ")
-                        else:
+            print ("[ 55 ] NOTIFIED READ MESSAGE")
+            try:
+                if cctv['cyduk'][op.param1]==True:
+                    if op.param1 in cctv['point']:
+                        Name = line.getContact(op.param2).displayName
+                        if Name in cctv['sidermem'][op.param1]:
                             pass
+                        else:
+                            cctv['sidermem'][op.param1] += "\nâ¢ " + Name
+                            if " " in Name:
+                                nick = Name.split(' ')
+                                if len(nick) == 2:
+                                    line.sendMessage(op.param1, "Wᴏɪɪɪ!!!!! " + "☞ " + nick[0] + " ☜" + "\nBᴇᴛᴀʜ ᴀᴍᴀᴛ ʟᴏ ᴊᴀᴅɪ sɪᴅᴇʀ \nᴀᴅᴀ ʏᴀɴɢ ɢᴀᴊɪ ʏ ᴊᴀᴅɪ sɪᴅᴇʀ ")
+                                    time.sleep(0.2)
+                                    mentionMembers(op.param1,[op.param2])
+                                else:
+                                    line.sendMessage(op.param1, "Assᴀʟᴀᴍᴜᴀʟᴀɪᴋᴜᴍ " + "☞" + nick[1] + " ☜" + "\nnNɢɪɴᴛɪᴘ ᴍᴇʟᴜʟᴜ \nᴍᴇɴᴅɪɴɢ sɪɴɪ \nᴋɪᴛᴀ ɴɢᴇʀᴜᴍᴘɪ ")
+                                    time.sleep(0.2)
+                                    mentionMembers(op.param1,[op.param2])
+                            else:
+                                line.sendMessage(op.param1, "Nᴀʜʜʜ " + "☞ " + Name + " ☜" + "\nKᴇᴛᴀᴜᴡᴀɴ ɴɢɪɴᴛɪᴘ \nHᴀʜᴀʜᴀ ")
+                                time.sleep(0.2)
+                                mentionMembers(op.param1,[op.param2])
                     else:
                         pass
-                except:
+                else:
                     pass
+            except:
+                pass
 
-        else:
-            pass
-                
+
         if op.type == 55:
             print ("[ 55 ] NOTIFIED READ MESSAGE")
             try:
@@ -1857,29 +2591,21 @@ def ririnBot(op):
                     else:
                         read['readMember'][op.param1] += op.param2
                     read['ROM'][op.param1][op.param2] = op.param2
+                    backupData()
                 else:
                    pass
-            except Exception as error:
-                logError(error)
-                traceback.print_tb(error.__traceback__)
+            except:
+                pass
     except Exception as error:
         logError(error)
-        traceback.print_tb(error.__traceback__)
-
+#==============================================================================#
 while True:
     try:
-        delete_log()
-        ops = ririnPoll.singleTrace(count=50)
+        ops = oepoll.singleTrace(count=50)
         if ops is not None:
             for op in ops:
-                ririnBot(op)
-                ririnPoll.setRevision(op.revision)
-    except Exception as error:
-        logError(error)
-        
-def atend():
-    print("Saving")
-    with open("Log_data.json","w",encoding='utf8') as f:
-        json.dump(msg_dict, f, ensure_ascii=False, indent=4,separators=(',', ': '))
-    print("BYE")
-atexit.register(atend)
+                lineBot(op)
+                oepoll.setRevision(op.revision)
+    except Exception as e:
+        logError(e)
+
