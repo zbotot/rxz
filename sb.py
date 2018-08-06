@@ -526,7 +526,7 @@ def lineBot(op):
                         line.sendMessage(to, str(ret_))
                     except Exception as e:
                         line.sendMessage(msg.to, str(e))
-                elif text.lower() == 'autoadd on':
+		elif text.lower() == 'autoadd on':
                     settings["autoAdd"] = True
                     line.sendMessage(to, "Berhasil mengaktifkan Auto Add")
                 elif text.lower() == 'autoadd off':
@@ -866,61 +866,22 @@ def lineBot(op):
                            line.sendMessage(msg.to,"Sambutan Di Nonaktifkan(　＾∇＾)")
 
 #==============================================================================#          
-                elif text.lower() == 'mention':
-                            if msg.toType == 0:
-                                sendMention(to, to, "", "")
-                            elif msg.toType == 2:
-                                group = line.getGroup(to)
-                                contact = [mem.mid for mem in group.members]
-                                ct1, ct2, ct3, ct4, ct5, jml = [], [], [], [], [], len(contact)
-                                if jml <= 19:
-                                    mentionMembers(to, contact)
-                                elif jml > 100 and jml <= 200: 
-                                    for a in range(0, 99):
-                                        ct1 += [contact[a]]
-                                    for b in range(100, jml):
-                                        ct2 += [contact[b]]
-                                    mentionMembers(to, ct1)
-                                    mentionMembers(to, ct2)
-                                elif jml > 200 and jml <= 300:
-                                    for a in range(0, 99):
-                                        ct1 += [contact[a]]
-                                    for b in range(100, 199):
-                                        ct2 += [contact[b]]
-                                    for c in range(200, jml):
-                                        ct3 += [contact[c]]
-                                    mentionMembers(to, ct1)
-                                    mentionMembers(to, ct2)
-                                    mentionMembers(to, ct3)
-                                elif jml > 300 and jml <= 400:
-                                    for a in range(0, 99):
-                                        ct1 += [contact[a]]
-                                    for b in range(100, 199):
-                                        ct2 += [contact[b]]
-                                    for c in range(200, 299):
-                                        ct3 += [contact[c]]
-                                    for d in range(300, jml):
-                                        ct4 += [contact[d]]
-                                    mentionMembers(to, ct1)
-                                    mentionMembers(to, ct2)
-                                    mentionMembers(to, ct3)
-                                    mentionMembers(to, ct4)
-                                elif jml > 400 and jml <= 500:
-                                    for a in range(0, 99):
-                                        ct1 += [contact[a]]
-                                    for b in range(100, 199):
-                                        ct2 += [contact[b]]
-                                    for c in range(200, 299):
-                                        ct3 += [contact[c]]
-                                    for d in range(300, 399):
-                                        ct4 += [contact[d]]
-                                    for e in range(400, jml):
-                                        ct4 += [contact[e]]
-                                    mentionMembers(to, ct1)
-                                    mentionMembers(to, ct2)
-                                    mentionMembers(to, ct3)
-                                    mentionMembers(to, ct4)
-                                    mentionMembers(to, ct5)
+
+            	elif cmd == 'mention':
+                	group = line.getGroup(msg.to)
+                	nama = [contact.mid for contact in group.members]
+                	k = len(nama)//20
+                	for a in range(k+1):
+                		txt = u''
+                		s=0
+                		b=[]
+                		for i in group.members[a*20 : (a+1)*20]:
+                    			b.append({"S":str(s), "E" :str(s+6), "M":i.mid})
+                    			s += 7
+                    			txt += u'@Zero \n'
+                		line.sendMessage(to, text=txt, contentMetadata={u'MENTION': json.dumps({'MENTIONEES':b})}, contentType=0)
+                		line.sendMessage(to, "Total {} Mention".format(str(len(nama))))
+		
 #===================================================================#
                 elif text.lower() == 'changepictureprofile':
                             settings["changePicture"] = True
@@ -2547,15 +2508,19 @@ def lineBot(op):
                         line.sendMessage(msg.to,text)
                 if msg.contentType == 0 and sender not in lineMID and msg.toType == 2:
                     if 'MENTION' in msg.contentMetadata.keys()!= None:
-                        names = re.findall(r'@(\w+)', text)
-                        mention = ast.literal_eval(msg.contentMetadata['MENTION'])
-                        mentionees = mention['MENTIONEES']
-                        lists = []
-                        for mention in mentionees:
-                            if lineMID in mention["M"]:
-                              if settings["detectMention"] == True:
-                                 sendMention(receiver, sender, "", " \nнα∂ιя вσѕ ")
-
+                            names = re.findall(r'@(\w+)', text)
+                            mention = ast.literal_eval(msg.contentMetadata['MENTION'])
+                            mentionees = mention['MENTIONEES']
+                            lists = []
+                            for mention in mentionees:
+                                if lineMid in mention["M"]:
+                                    if wait["autoRespon"] == True:
+                                    	line.sendChatChecked(msg._from,msg.id)
+                                    	contact = ririn.getContact(msg._from)
+                                    	line.sendImageWithURL(msg._from, "http://dl.profile.line-cdn.net{}".format(contact.picturePath))
+                                    	sendMention(sender, "ᴏɪ ᴍʙʟᴏ @!      ,\nɴɢᴀᴘᴀɪɴ ᴛᴀɢ ᴛᴀɢ ɢᴡ", [sender])
+                                    	dee = "" + random.choice(balas)
+                                    break
         if op.type == 17:
            print ("MEMBER JOIN TO GROUP")
            if settings["Sambutan"] == True:
